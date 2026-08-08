@@ -150,6 +150,16 @@
   标签是一块刺眼的白斑。只有落在白色画布上时才用 `#FFFFFF`。校验器报
   WARNING `label sits on tinted container … but labelBackgroundColor is …`，
   修法就是照提示把底色改成容器 fill（如 `labelBackgroundColor=#F5E0DB`）。
+- **带 `fillOpacity` 的容器：底色要用混合色（铁律）**：半透明容器实际渲染
+  的底色 = 填充色与**白纸**按不透明度混合后的颜色，**不是原始 fillColor**。
+  标签底色必须用混合后的颜色，否则仍是一块色差白斑。混合公式（R/G/B 每个
+  通道独立）：`blend = round(fillCh × opacity/100 + 255 × (1 − opacity/100))`。
+  例：`#E8DAEF` @ `fillOpacity=35` → 232×0.35+255×0.65 ≈ 247 → **`#F6F2F9`**；
+  `#FAF3E3` @ 40 → `#FDFAF3`；`#F1F3F5` @ 45 → `#F8F9FA`。校验器对带
+  fillOpacity 的容器**按混合色比较**，WARNING 提示里直接给出应设的十六进制值
+  （如 `set labelBackgroundColor=#FDFAF3 (container 'g_dec2' renders fill
+  #FAF3E3 at 40% over white = #FDFAF3)`）。容器一般开 `fillOpacity=40~70`，
+  几乎所有半透明容器都触发这条——动手时先按公式把可见底色算好再填。
 - **长边走外环**：跨越多个列带/道带的边（残差、反馈、跨面板），沿图的
   外圈走廊或面板缝隙走，不要从图元密集区中间穿膛。
 - **箭头绝不从文字中间穿过（铁律）**：每条边的实际走向不得与任何**非自身**

@@ -30,10 +30,13 @@ Checks added for this skill's observed failure modes:
     and routes slicing through other boxes' top titles (containers are exempt
     from the through-vertex check, so their title bands were previously silent).
 
-Edge routing checks (warnings) only apply to edges with explicit waypoints
-(<Array as="points">) - the route of an auto-routed edge is computed by
-draw.io at render time and not stored in the XML, so checking it would guess.
-Endpoints honour exitX/exitY / entryX/entryY when present, else node centre.
+Edge routing checks (warnings) use explicit waypoints (<Array as="points">)
+when present; waypoint-free orthogonal edges get an expected Manhattan
+Z-route through the pinned exit/entry points (auto_ortho_route), an
+approximation of draw.io's render-time routing that catches the common
+"edge slices a sibling box" defect. Diagonal auto-routed edges are skipped -
+their route cannot be guessed. Endpoints honour exitX/exitY / entryX/entryY
+when present, else node centre.
 
 Exit status is non-zero when any error (or, with --strict, any warning) is
 found, so it can gate the workflow before PNG export.
@@ -781,6 +784,26 @@ def page_fit_warnings(page_w, page_h, cells, by_id):
     return warns
 
 
+def blend_over_white(fill, opacity):
+    """Visible colour of ``fill`` rendered at ``opacity``% over a white page.
+
+    Containers use semi-transparent fills (``fillOpacity=35`` etc.), so the
+    colour a label actually sits on is fill blended with white, not the raw
+    fillColor. A label slab set to the raw fill reads as a dark block on the
+    translucent panel. ``opacity`` None/100 returns ``fill`` unchanged.
+    """
+    if not fill or len(fill) != 7 or fill[0] != "#":
+        return None
+    try:
+        r, g, b = int(fill[1:3], 16), int(fill[3:5], 16), int(fill[5:7], 16)
+    except ValueError:
+        return None
+    a = 1.0 if opacity is None else max(0.0, min(1.0, float(opacity) / 100.0))
+    return "#%02X%02X%02X" % (int(r * a + 255 * (1 - a)),
+                              int(g * a + 255 * (1 - a)),
+                              int(b * a + 255 * (1 - a)))
+
+
 def label_bg_warnings(cells, by_id):
     """A label sitting on a tinted panel must carry the panel's fill colour.
 
@@ -788,8 +811,11 @@ def label_bg_warnings(cells, by_id):
     white canvas that background is #FFFFFF. But when the label's midpoint lands
     inside a tinted container, a white label box floats as an abrupt white slab
     on the coloured panel. The label background must then match the container's
-    fillColor instead. Labels on the plain canvas (no container under the
-    point) and on white containers keep the default #FFFFFF.
+    *visible* colour. Containers are semi-transparent (``fillOpacity``), so the
+    visible colour is ``blend_over_white(fillColor, fillOpacity)`` — not the raw
+    fillColor, which is darker than what renders. Labels on the plain canvas
+    (no container under the point) and on white containers keep the default
+    #FFFFFF.
     """
     verts = [(c.get("id"), abs_rect(c, by_id), c) for c in cells
              if c.get("vertex") == "1" and not is_edge_label(c)
@@ -819,28 +845,74 @@ def label_bg_warnings(cells, by_id):
         fill = style_value(ccell.get("style") or "", "fillColor")
         if not fill or fill.upper() == "#FFFFFF":
             continue
+        # Semi-transparent containers: the label must match the blended colour
+        # actually rendered, not the raw fill (which looks like a dark slab).
+        op = style_num(ccell.get("style") or "", "fillOpacity")
+        visible = blend_over_white(fill, op) or fill.upper()
         lbg = style_value(c.get("style") or "", "labelBackgroundColor")
         if lbg is None:
             continue  # missing bg already flagged by the label-bg rule
-        if lbg.upper() != fill.upper():
+        if lbg.upper() != visible:
+            hint = (f"container {ccell.get('id')!r} renders fill {fill} at "
+                    f"{op:g}% over white = {visible}" if op else
+                    f"container {ccell.get('id')!r} fill {visible}")
             warns.append(
                 f"edge {c.get('id')!r} label sits on tinted container "
                 f"{ccell.get('id')!r} (fill {fill}) but labelBackgroundColor "
-                f"is {lbg} - the white slab looks abrupt on the panel; set "
-                f"labelBackgroundColor={fill}")
+                f"is {lbg} - the slab looks darker than the translucent panel; "
+                f"set labelBackgroundColor={visible} ({hint})")
     return warns
 
 
+def auto_ortho_route(edge, by_id):
+    """Expected Manhattan route draw.io computes for a waypoint-free
+    orthogonal edge: a Z-shape through the mid-X (horizontal-dominant) or
+    mid-Y (vertical-dominant) of the two pinned endpoints. This is an
+    approximation of the render-time route - good enough to catch the common
+    "edge slices a sibling box" defect, not a promise of the exact bends.
+    Returns None for non-orthogonal styles or missing endpoints.
+    """
+    style = edge.get("style") or ""
+    if style_value(style, "edgeStyle") != "orthogonalEdgeStyle":
+        return None
+    s = endpoint(edge, "source", by_id)
+    t = endpoint(edge, "target", by_id)
+    if s is None or t is None:
+        return None
+    sx, sy = s
+    tx, ty = t
+    if abs(tx - sx) >= abs(ty - sy):      # horizontal-dominant: Z via mid-X
+        mx = (sx + tx) / 2.0
+        return [s, (mx, sy), (mx, ty), t]
+    my = (sy + ty) / 2.0                  # vertical-dominant: Z via mid-Y
+    return [s, (sx, my), (tx, my), t]
+
+
 def geometry_warnings(cells, ids, parents):
-    """Edge-through-vertex and edge-crossing warnings for waypointed edges."""
+    """Edge-through-vertex and edge-crossing warnings.
+
+    Waypointed edges use their stored route; waypoint-free orthogonal edges
+    get an *expected* Manhattan Z-route (auto_ortho_route), so the through-
+    vertex check covers the whole diagram, not just explicitly-routed edges.
+    Edge-crossing is still judged only between waypointed edges - auto-routes
+    are an approximation, and pairwise crossings of approximations would be
+    noisy.
+    """
     warns = []
-    routed = []
+    routed = []   # (eid, pts, ends) for waypointed edges
+    auto = []     # (eid, pts, ends) for waypoint-free orthogonal edges
     for c in cells:
-        if c.get("edge") == "1":
-            pts = edge_route(c, ids)
-            if pts:
-                routed.append((c.get("id"), pts,
-                               {c.get("source"), c.get("target")}))
+        if c.get("edge") != "1":
+            continue
+        pts = edge_route(c, ids)
+        if pts:
+            routed.append((c.get("id"), pts,
+                           {c.get("source"), c.get("target")}))
+            continue
+        ar = auto_ortho_route(c, ids)
+        if ar:
+            auto.append((c.get("id"), ar,
+                         {c.get("source"), c.get("target")}))
     # In this skill's flat layout a "container" is a plain vertex that fully
     # contains other vertices; an edge between two members legitimately runs
     # inside it. Only vertices containing nothing ("leaves") are obstacles.
@@ -851,9 +923,27 @@ def geometry_warnings(cells, ids, parents):
     containers = {vid for vid, box in allv
                   if any(v2 != vid and contains(box, b2) for v2, b2 in allv)}
     leaves = [(vid, box) for vid, box in allv if vid not in containers]
-    for eid, pts, ends in routed:
+    # Sibling membership: a leaf inside the same container as the edge's source
+    # or target is a "sibling member" - an auto-routed edge slicing one is the
+    # "wire through sub-box" defect, and needs a different (actionable) message.
+    mem_of = {}
+    for vid, box in allv:
+        for cid, cbox in allv:
+            if vid != cid and contains(cbox, box):
+                mem_of.setdefault(vid, set()).add(cid)
+    for eid, pts, ends in routed + auto:
+        sib = set()
+        for end in ends:
+            sib |= mem_of.get(end, set())
         for vid, box in leaves:
-            if vid not in ends and route_hits_rect(pts, box):
+            if vid in ends or not route_hits_rect(pts, box):
+                continue
+            if mem_of.get(vid, set()) & sib:
+                warns.append(
+                    f"edge {eid!r} auto-routed across sibling member {vid!r} "
+                    f"(shares a container with an endpoint) - add a waypoint "
+                    f"or change exit/entry side to route around it")
+            else:
                 warns.append(f"edge {eid!r} routes through vertex {vid!r}")
     for i in range(len(routed)):
         for j in range(i + 1, len(routed)):
