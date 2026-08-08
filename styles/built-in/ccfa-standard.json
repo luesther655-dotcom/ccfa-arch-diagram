@@ -1,0 +1,87 @@
+{
+  "name": "ccfa-standard",
+  "version": 1,
+  "palette": {
+    "kind": {
+      "input": {
+        "fill": "#DCE9F7",
+        "stroke": "#3A5A8A",
+        "text": "#1B2A3B"
+      },
+      "tensor": {
+        "fill": "#DCE9F7",
+        "stroke": "#3A5A8A",
+        "text": "#1B2A3B"
+      },
+      "embedding": {
+        "fill": "#DCE9F7",
+        "stroke": "#3A5A8A",
+        "text": "#1B2A3B"
+      },
+      "positional": {
+        "fill": "#FBE5C6",
+        "stroke": "#B0651A",
+        "text": "#6E3D0A"
+      },
+      "attention": {
+        "fill": "#E8DAEF",
+        "stroke": "#6C4A8A",
+        "text": "#3A2560"
+      },
+      "module": {
+        "fill": "#FFFFFF",
+        "stroke": "#3A4A5A",
+        "text": "#202124"
+      },
+      "feedforward": {
+        "fill": "#FFFFFF",
+        "stroke": "#7A8A9A",
+        "text": "#202124"
+      },
+      "norm": {
+        "fill": "#F1F3F5",
+        "stroke": "#7B8A9A",
+        "text": "#3C4043"
+      },
+      "residual": {
+        "fill": "#FAF3E3",
+        "stroke": "#C9A06C",
+        "text": "#6E4A1A"
+      },
+      "loss": {
+        "fill": "#FADBD8",
+        "stroke": "#C0392B",
+        "text": "#7B241C"
+      },
+      "output": {
+        "fill": "#D5F0DC",
+        "stroke": "#1E8449",
+        "text": "#145A32"
+      },
+      "data": {
+        "fill": "#F1F3F5",
+        "stroke": "#7B8A9A",
+        "text": "#202124"
+      },
+      "default": {
+        "fill": "#FFFFFF",
+        "stroke": "#5F6368",
+        "text": "#202124"
+      }
+    },
+    "group": {
+      "fill": "#FFFFFF",
+      "stroke": "#7B8A9A",
+      "text": "#3A4A5A"
+    },
+    "edge": "#3A4A5A",
+    "edge_dim": "#A8B4C2",
+    "legend": {
+      "fill": "#FFFFFF",
+      "stroke": "#B8C2CC",
+      "text": "#3C4043"
+    },
+    "title": "#202124",
+    "font": "Times New Roman"
+  }
+}

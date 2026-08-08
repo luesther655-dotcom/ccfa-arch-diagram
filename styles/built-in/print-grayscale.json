@@ -1,0 +1,87 @@
+{
+  "name": "print-grayscale",
+  "version": 1,
+  "palette": {
+    "kind": {
+      "input": {
+        "fill": "#E0E0E0",
+        "stroke": "#000000",
+        "text": "#000000"
+      },
+      "tensor": {
+        "fill": "#E0E0E0",
+        "stroke": "#000000",
+        "text": "#000000"
+      },
+      "embedding": {
+        "fill": "#E0E0E0",
+        "stroke": "#000000",
+        "text": "#000000"
+      },
+      "positional": {
+        "fill": "#BDBDBD",
+        "stroke": "#000000",
+        "text": "#000000"
+      },
+      "attention": {
+        "fill": "#F5F5F5",
+        "stroke": "#000000",
+        "text": "#000000"
+      },
+      "module": {
+        "fill": "#FFFFFF",
+        "stroke": "#000000",
+        "text": "#000000"
+      },
+      "feedforward": {
+        "fill": "#FFFFFF",
+        "stroke": "#424242",
+        "text": "#000000"
+      },
+      "norm": {
+        "fill": "#EEEEEE",
+        "stroke": "#616161",
+        "text": "#000000"
+      },
+      "residual": {
+        "fill": "#F5F5F5",
+        "stroke": "#9E9E9E",
+        "text": "#000000"
+      },
+      "loss": {
+        "fill": "#9E9E9E",
+        "stroke": "#000000",
+        "text": "#FFFFFF"
+      },
+      "output": {
+        "fill": "#757575",
+        "stroke": "#000000",
+        "text": "#FFFFFF"
+      },
+      "data": {
+        "fill": "#EEEEEE",
+        "stroke": "#616161",
+        "text": "#000000"
+      },
+      "default": {
+        "fill": "#FFFFFF",
+        "stroke": "#424242",
+        "text": "#000000"
+      }
+    },
+    "group": {
+      "fill": "#FAFAFA",
+      "stroke": "#9E9E9E",
+      "text": "#424242"
+    },
+    "edge": "#424242",
+    "edge_dim": "#9E9E9E",
+    "legend": {
+      "fill": "#FFFFFF",
+      "stroke": "#BDBDBD",
+      "text": "#000000"
+    },
+    "title": "#000000",
+    "font": "Times New Roman"
+  }
+}

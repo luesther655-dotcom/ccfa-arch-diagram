@@ -1,0 +1,47 @@
+{
+  "skill_name": "ccfa-arch-diagram",
+  "evals": [
+    {
+      "id": 1,
+      "name": "ner-bilstm-crf",
+      "prompt": "我在写一篇中文命名实体识别（NER）的论文。我的模型是 BiLSTM-CRF：字符经过 embedding 得到字符向量，然后分别经过前向 LSTM 和后向 LSTM，拼接隐状态，再经过一个 CRF 解码层输出标签序列。请为我生成一张 CCF-A 顶会风格的模型架构图。",
+      "expected_output": "BiLSTM-CRF 架构的 .drawio 文件 + 预览图：包含 字符输入/char embedding/前向LSTM/后向LSTM/拼接/CRF解码/标签序列输出 等全部部件，无重叠，主流程从左到右。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "gat-node-classification",
+      "prompt": "下面是我的图神经网络节点分类模型的 PyTorch 代码，请根据代码生成一张 CCF-A 风格的架构图：\n\n```python\nclass GATLayer(nn.Module):\n    def __init__(self, in_dim, out_dim, heads=4):\n        super().__init__()\n        self.attn_heads = nn.ModuleList([\n            nn.Linear(in_dim, out_dim) for _ in range(heads)])\n        self.alpha = nn.Parameter(torch.ones(heads, 2 * out_dim))\n        self.elu = nn.ELU()\n\n    def forward(self, x, adj):\n        h = [head(x) for head in self.attn_heads]   # 多头投影\n        attn = self.elu(torch.stack(h).matmul(self.alpha))\n        attn = torch.masked_fill(attn, adj == 0, -1e9)\n        attn = F.softmax(attn, dim=-1)              # 邻居注意力权重\n        out = torch.einsum('hnvl,hvl->hv', attn, torch.stack(h))\n        return out.mean(dim=0)                      # 多头平均\n\nclass GAT(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.l1 = GATLayer(128, 128, heads=4)\n        self.l2 = GATLayer(128, 64, heads=4)\n        self.elu = nn.ELU()\n        self.classifier = nn.Linear(64, 7)\n        self.softmax = nn.Softmax(dim=-1)\n\n    def forward(self, x, adj):\n        z = self.elu(self.l1(x, adj))\n        z = self.elu(self.l2(z, adj))\n        return self.softmax(self.classifier(z))\n```",
+      "expected_output": "GAT 架构的 .drawio 文件 + 预览图：包含 图输入(节点特征+邻接矩阵)/两层GAT(每层含多头投影/注意力权重softmax/邻居聚合/多头平均)/ELU/分类头/softmax 输出 等部件，无重叠。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "multimodal-dual-encoder",
+      "prompt": "我的模型是一个多模态对比学习模型，类似 CLIP：图像经过视觉编码器得到视觉特征，文本经过文本编码器得到文本特征，两者分别通过一个线性投影层映射到共享语义空间并做 L2 归一化，最后用 InfoNCE 对比损失拉近匹配的图文对。请画一张 CCF-A 风格的架构图。",
+      "expected_output": "双塔对比学习架构的 .drawio 文件 + 预览图：包含 图像输入/视觉编码器/文本输入/文本编码器/两个投影头/归一化/InfoNCE 对比损失/嵌入共享空间 等部件，两条并行分支清晰，无重叠。",
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "multi-agent-panels",
+      "prompt": "我的方法是一个多智能体辩论系统：三个 LLM 智能体各自生成候选答案，一个裁判智能体打分并挑出当前最优，最优答案反馈给三个智能体进入下一轮辩论，直到收敛。系统还有一个经验回放库存储历史辩论轨迹。请画一张 CCF-A 风格的系统架构图。",
+      "expected_output": "原型 C 多面板系统图的 .drawio + 预览图：多个淡彩子图面板（候选生成/裁判打分/经验回放等），跨面板粗箭头构成数据流闭环，反馈回路用虚线，样本库用圆柱体，带图例，无重叠。",
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "continual-learning-multipanel",
+      "prompt": "我的持续学习方法有三个阶段想画在一张图里：(a) 用旧模型对新数据做知识蒸馏训练新模型，(b) 把旧特征库迁移到新特征空间，(c) 用更新后的模型做推理测试。请画一张 CCF-A 风格的 (a)(b)(c) 多子图。",
+      "expected_output": "原型 B 多面板训练图的 .drawio + 预览图：(a)(b)(c) 三个子图面板，(a) 含旧模型(灰色/虚线表示冻结)+新模型+蒸馏损失，(b) 含特征库迁移大箭头，(c) 含查询到结果的测试流程，跨面板粗边衔接，无重叠。",
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "cnn-pipeline-density",
+      "prompt": "我的超分辨率网络：输入 LR 图像先过 3 个 3×3 卷积提取浅层特征，然后过 6 个残差块（每块两个卷积+跳跃相加），最后 PixelShuffle 上采样并与双三次上采样的输入捷径相加得到 SR 图像。请画一张 CCF-A 风格的网络结构图。",
+      "expected_output": "原型 A 水平长条架构图的 .drawio + 预览图：卷积用竖条(vbar)、相加用 op 小圆(⊕)、输入输出用立方体，残差跳跃用虚线成环，残差块组画一个容器标 ×6，边上有特征/形状标注，底部图例含操作符，全图 ≥15 组件，无重叠。",
+      "files": []
+    }
+  ]
+}

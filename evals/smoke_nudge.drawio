@@ -1,0 +1,65 @@
+<mxfile host="app.diagrams.net" agent="ccfa-arch-diagram" version="24.0.0">
+  <diagram name="nudge-smoke" id="ccfa-arch-diagram">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="870" pageHeight="300" math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+    <mxCell id="diagram_title" value="Skip-Connection Smoke Test" style="text;html=1;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;fontColor=#202124;fontFamily=Times New Roman;" vertex="1" parent="1">
+      <mxGeometry x="44" y="8" width="782" height="24" as="geometry"/>
+    </mxCell>
+    <mxCell id="in" value="Input" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;spacing=4;fillColor=#DCE9F7;strokeColor=#3A5A8A;fontColor=#1B2A3B;fontFamily=Times New Roman;fontSize=12;verticalAlign=middle;align=center;" vertex="1" parent="1">
+      <mxGeometry x="44.0" y="78.0" width="150" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="a" value="Block A" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;spacing=4;fillColor=#FFFFFF;strokeColor=#3A4A5A;fontColor=#202124;fontFamily=Times New Roman;fontSize=12;verticalAlign=middle;align=center;" vertex="1" parent="1">
+      <mxGeometry x="254.0" y="78.0" width="150" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="b" value="Block B" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;spacing=4;fillColor=#FFFFFF;strokeColor=#3A4A5A;fontColor=#202124;fontFamily=Times New Roman;fontSize=12;verticalAlign=middle;align=center;" vertex="1" parent="1">
+      <mxGeometry x="464.0" y="78.0" width="150" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="out" value="Output" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;spacing=4;fillColor=#D5F0DC;strokeColor=#1E8449;fontColor=#145A32;fontFamily=Times New Roman;fontSize=12;verticalAlign=middle;align=center;" vertex="1" parent="1">
+      <mxGeometry x="674.0" y="78.0" width="150" height="48" as="geometry"/>
+    </mxCell>
+    <mxCell id="legend_box" value="" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B8C2CC;fontColor=#3C4043;fontFamily=Times New Roman;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="44" y="184" width="780" height="42" as="geometry"/>
+    </mxCell>
+    <mxCell id="lg_swatch_input" value="" style="rounded=1;arcSize=10;fillColor=#DCE9F7;strokeColor=#3A5A8A;" vertex="1" parent="1">
+      <mxGeometry x="295.5" y="203.5" width="15" height="15" as="geometry"/>
+    </mxCell>
+    <mxCell id="lg_label_input" value="input" style="text;html=1;fontColor=#3C4043;fontFamily=Times New Roman;fontSize=11;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="314.5" y="203.5" width="53.0" height="15" as="geometry"/>
+    </mxCell>
+    <mxCell id="lg_swatch_module" value="" style="rounded=1;arcSize=10;fillColor=#FFFFFF;strokeColor=#3A4A5A;" vertex="1" parent="1">
+      <mxGeometry x="376.5" y="203.5" width="15" height="15" as="geometry"/>
+    </mxCell>
+    <mxCell id="lg_label_module" value="module" style="text;html=1;fontColor=#3C4043;fontFamily=Times New Roman;fontSize=11;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="395.5" y="203.5" width="60.0" height="15" as="geometry"/>
+    </mxCell>
+    <mxCell id="lg_swatch_output" value="" style="rounded=1;arcSize=10;fillColor=#D5F0DC;strokeColor=#1E8449;" vertex="1" parent="1">
+      <mxGeometry x="464.5" y="203.5" width="15" height="15" as="geometry"/>
+    </mxCell>
+    <mxCell id="lg_label_output" value="output" style="text;html=1;fontColor=#3C4043;fontFamily=Times New Roman;fontSize=11;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry x="483.5" y="203.5" width="60.0" height="15" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_13" value="B×L×d" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#3A4A5A;strokeWidth=1.2;endArrow=block;endFill=1;exitX=1;exitY=0.250;exitDx=0;exitDy=0;entryX=0;entryY=0.500;entryDx=0;entryDy=0;fontSize=10;fontColor=#3A4A5A;fontFamily=Times New Roman;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="in" target="a">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_14" value="B×L×d" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#3A4A5A;strokeWidth=1.2;endArrow=block;endFill=1;exitX=1;exitY=0.500;exitDx=0;exitDy=0;entryX=0;entryY=0.500;entryDx=0;entryDy=0;fontSize=10;fontColor=#3A4A5A;fontFamily=Times New Roman;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="a" target="b">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_15" value="B×L×d" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#3A4A5A;strokeWidth=1.2;endArrow=block;endFill=1;exitX=1;exitY=0.500;exitDx=0;exitDy=0;entryX=0;entryY=0.250;entryDx=0;entryDy=0;fontSize=10;fontColor=#3A4A5A;fontFamily=Times New Roman;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="b" target="out">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_16" value="residual" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#A8B4C2;strokeWidth=1.2;dashed=1;endArrow=block;endFill=1;exitX=1;exitY=0.500;exitDx=0;exitDy=0;entryX=0;entryY=0.500;entryDx=0;entryDy=0;fontSize=10;fontColor=#A8B4C2;fontFamily=Times New Roman;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="in" target="out">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+<mxPoint x="194.00" y="74.00"/><mxPoint x="666.00" y="74.00"/><mxPoint x="666.00" y="102.00"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="diagram_caption" value="Fig. 1. A residual skip over an intermediate block (auto-nudge detour)." style="text;html=1;fontSize=13;fontStyle=0;align=center;verticalAlign=middle;fontColor=#202124;fontFamily=Times New Roman;" vertex="1" parent="1">
+      <mxGeometry x="44" y="238" width="782" height="18" as="geometry"/>
+    </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

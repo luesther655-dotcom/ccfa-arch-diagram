@@ -1,0 +1,19 @@
+{
+  "diagram_name": "nudge-smoke",
+  "title": "Skip-Connection Smoke Test",
+  "caption": "Fig. 1. A residual skip over an intermediate block (auto-nudge detour).",
+  "components": [
+    {"id": "in",  "label": "Input",  "kind": "input",  "layer": 0, "lane": 0},
+    {"id": "a",   "label": "Block A", "kind": "module", "layer": 1, "lane": 0},
+    {"id": "b",   "label": "Block B", "kind": "module", "layer": 2, "lane": 0},
+    {"id": "out", "label": "Output", "kind": "output", "layer": 3, "lane": 0}
+  ],
+  "edges": [
+    {"from": "in",  "to": "a",   "label": "B×L×d"},
+    {"from": "a",   "to": "b",   "label": "B×L×d"},
+    {"from": "b",   "to": "out", "label": "B×L×d"},
+    {"from": "in",  "to": "out", "label": "residual", "style": "dashed"}
+  ],
+  "groups": [],
+  "layout": {"direction": "LR", "palette": "ccfa-standard"}
+}

@@ -1,0 +1,13 @@
+# Python 缓存
+__pycache__/
+*.pyc
+
+# skill-creator 评测工作区（本地产物）
+drawskill-workspace/
+
+# 真实论文风格参考图（版权原因，仅本地使用，不上传）
+ccfa_png/
+
+# 系统文件
+.DS_Store
+Thumbs.db

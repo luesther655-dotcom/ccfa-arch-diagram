@@ -1,0 +1,87 @@
+{
+  "name": "neural-purple",
+  "version": 1,
+  "palette": {
+    "kind": {
+      "input": {
+        "fill": "#EDE7F6",
+        "stroke": "#5E35B1",
+        "text": "#311B92"
+      },
+      "tensor": {
+        "fill": "#EDE7F6",
+        "stroke": "#5E35B1",
+        "text": "#311B92"
+      },
+      "embedding": {
+        "fill": "#EDE7F6",
+        "stroke": "#5E35B1",
+        "text": "#311B92"
+      },
+      "positional": {
+        "fill": "#FFF8E1",
+        "stroke": "#F9A825",
+        "text": "#7D5700"
+      },
+      "attention": {
+        "fill": "#D1C4E9",
+        "stroke": "#4527A0",
+        "text": "#2A1966"
+      },
+      "module": {
+        "fill": "#FFFFFF",
+        "stroke": "#7E57C2",
+        "text": "#1A1A2E"
+      },
+      "feedforward": {
+        "fill": "#FFFFFF",
+        "stroke": "#9575CD",
+        "text": "#1A1A2E"
+      },
+      "norm": {
+        "fill": "#F3E5F5",
+        "stroke": "#AB47BC",
+        "text": "#6A1B9A"
+      },
+      "residual": {
+        "fill": "#F8F8FB",
+        "stroke": "#B39DDB",
+        "text": "#3A3A55"
+      },
+      "loss": {
+        "fill": "#FCE4EC",
+        "stroke": "#C2185B",
+        "text": "#880E4F"
+      },
+      "output": {
+        "fill": "#E0F7FA",
+        "stroke": "#00838F",
+        "text": "#004D57"
+      },
+      "data": {
+        "fill": "#F5F5F5",
+        "stroke": "#9E9E9E",
+        "text": "#1A1A2E"
+      },
+      "default": {
+        "fill": "#FFFFFF",
+        "stroke": "#7E57C2",
+        "text": "#1A1A2E"
+      }
+    },
+    "group": {
+      "fill": "#FAF8FD",
+      "stroke": "#9575CD",
+      "text": "#5E35B1"
+    },
+    "edge": "#5E35B1",
+    "edge_dim": "#B39DDB",
+    "legend": {
+      "fill": "#FFFFFF",
+      "stroke": "#D1C4E9",
+      "text": "#311B92"
+    },
+    "title": "#1A1A2E",
+    "font": "Times New Roman"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$comment": "样式预设（palette preset）的字段说明。文件放在 ~/.ccfa-arch-diagram/styles/<name>.json 或本 skill 的 styles/built-in/<name>.json。用法：无加载脚本——Claude 读取本 JSON，把色值直接抄进手写的 mxCell style 串。用户预设可覆盖同名内置。",
+  "required": ["name", "version", "palette"],
+  "properties": {
+    "name": { "type": "string", "description": "预设名（小写），与文件名一致" },
+    "version": { "const": 1 },
+    "confidence": { "enum": ["low", "medium", "high"], "description": "从图片/图里提取时的置信度（可选）" },
+    "palette": {
+      "type": "object",
+      "description": "调色板主体。也可整体作为文件的顶层（省略 name/version）。",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "object",
+          "description": "每种组件语义 kind -> 颜色。kind 可取值见 SKILL.md；必须含 default 兜底。",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["fill", "stroke", "text"],
+            "properties": {
+              "fill":   { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "填充色" },
+              "stroke": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "边框色" },
+              "text":   { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "文字色" }
+            }
+          }
+        },
+        "group":  { "description": "分组容器颜色 {fill,stroke,text}（缺省有兜底）" },
+        "edge":   { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "主边颜色（缺省有兜底）" },
+        "edge_dim": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "残差/次要边颜色（缺省有兜底）" },
+        "legend": { "description": "图例框颜色 {fill,stroke,text}（缺省有兜底）" },
+        "title":  { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "标题文字色（缺省有兜底）" },
+        "font":   { "type": "string", "description": "字体族（缺省 Times New Roman，顶会惯例；中文标签自动回退到系统中文字体）" }
+      }
+    }
+  },
+  "example": {
+    "name": "my-journal-style",
+    "version": 1,
+    "palette": {
+      "kind": {
+        "input":   {"fill": "#E8F0FE", "stroke": "#1A73E8", "text": "#174EA6"},
+        "module":  {"fill": "#FFFFFF", "stroke": "#4285F4", "text": "#202124"},
+        "default": {"fill": "#FFFFFF", "stroke": "#5F6368", "text": "#202124"}
+      },
+      "group": {"fill": "#FFFFFF", "stroke": "#7B8A9A", "text": "#3A4A5A"},
+      "edge": "#3A4A5A",
+      "edge_dim": "#A8B4C2",
+      "legend": {"fill": "#FFFFFF", "stroke": "#B8C2CC", "text": "#3C4043"},
+      "title": "#202124",
+      "font": "Times New Roman"
+    }
+  }
+}
