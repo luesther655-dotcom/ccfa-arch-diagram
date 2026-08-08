@@ -14,8 +14,17 @@ Every diagram is **hand-authored directly as editable draw.io XML** and rendered
 
 ---
 
+## Sample Output
+
+![Skill architecture overview](skill_architecture.png)
+
+The skill's own architecture, drawn by the skill itself — editable source: [`examples/skill_architecture.drawio`](examples/skill_architecture.drawio).
+
+---
+
 ## Table of Contents
 
+- [Sample Output](#sample-output)
 - [Features](#features)
 - [Quick Start](#quick-start)
 - [Usage](#usage)
