@@ -42,6 +42,7 @@ The skill's own architecture, drawn by the skill itself — editable source: [`e
 - **Five proven archetypes** — pipeline-with-zoom, multi-panel training, multi-agent system, reasoning-stage containers, and framework bands cover the shapes that actually recur in CCF-A figures.
 - **Deterministic structural validation** — `validate.py` lints for overlaps, crossings, title-band intrusions, port stacking, oversized canvases, and dangling edges *before* you export; `edgeports.py` / `respread_ports.py` auto-fix stacked ports.
 - **Academic styling** — six built-in palettes, Times New Roman labels, translucent containers, op-circles, `×N` repetition markers, legends, and figure captions.
+- **Icon asset pack** — 25 hand-drawn monochrome SVG line icons (GPU/cloud/database/person/eye/brain/…), embedded as zero-dependency `shape=image` data URIs; recolor the whole set with one command (see [`references/icon-library.md`](references/icon-library.md)).
 - **Personal style presets** — "use my `<name>` style", or teach it the palette from an existing figure; presets live in `~/.ccfa-arch-diagram/styles/`.
 
 ## Quick Start
@@ -54,14 +55,14 @@ The skill's own architecture, drawn by the skill itself — editable source: [`e
 
 ```bash
 mkdir -p ~/.claude/skills/ccfa-arch-diagram
-cp -r SKILL.md README.md LICENSE references scripts styles examples evals ~/.claude/skills/ccfa-arch-diagram/
+cp -r SKILL.md README.md LICENSE references scripts styles examples evals assets ~/.claude/skills/ccfa-arch-diagram/
 ```
 
 **Project-scoped** (this repository only):
 
 ```bash
 mkdir -p .claude/skills/ccfa-arch-diagram
-cp -r SKILL.md README.md LICENSE references scripts styles examples evals .claude/skills/ccfa-arch-diagram/
+cp -r SKILL.md README.md LICENSE references scripts styles examples evals assets .claude/skills/ccfa-arch-diagram/
 ```
 
 Restart Claude Code (or start a new session). The skill then **auto-triggers** whenever you describe a model you want diagrammed, or you can invoke it directly with `/ccfa-arch-diagram`.
@@ -113,9 +114,10 @@ The preset format is documented in [`styles/schema.json`](styles/schema.json).
 ```
 ccfa-arch-diagram/
 ├── SKILL.md                  # Main skill instructions (the workflow Claude follows)
-├── references/               # In-depth guides (style guide, XML reference, palette, layout)
-├── scripts/                  # Deterministic lint & port-fix tools (pure Python stdlib)
+├── references/               # In-depth guides (style guide, XML reference, palette, layout, icons)
+├── scripts/                  # Deterministic lint & port-fix tools + icon library builder (pure Python stdlib)
 ├── styles/                   # Style-preset schema + 6 built-in palettes
+├── assets/                   # Icon asset pack: manifest + generated draw.io library & preview grid
 ├── examples/                 # Validated .drawio archetype examples (use as templates)
 ├── evals/                    # Test cases / eval harness
 └── LICENSE                   # MIT
@@ -151,7 +153,7 @@ Contributions are welcome! The most useful contributions for a research-tooling 
 ## Dependencies
 
 - **draw.io desktop** — required for PNG/SVG preview and export: [drawio-desktop releases](https://github.com/jgraph/drawio-desktop/releases), or the web app at [app.diagrams.net](https://app.diagrams.net). The `.drawio` file itself can be produced without it.
-- **Python 3** (optional, stdlib only) — runs `scripts/validate.py`, `edgeports.py`, `respread_ports.py`.
+- **Python 3** (optional, stdlib only) — runs `scripts/validate.py`, `edgeports.py`, `respread_ports.py`; `scripts/build_icon_library.py` regenerates the icon asset pack from its manifest.
 - **A vision-capable model** — used for the visual self-check step.
 
 ## License

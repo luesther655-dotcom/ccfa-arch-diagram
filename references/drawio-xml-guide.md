@@ -64,6 +64,30 @@
 加粗：公共后缀里加 `fontStyle=1`。虚线描边（冻结副本）：`dashed=1;`。
 显式覆盖颜色：`fillColor=#RRGGBB;strokeColor=#RRGGBB;fontColor=#RRGGBB;`。
 
+### 实体图标（shape=image · 内嵌 SVG）
+
+GPU/云/数据库/人/眼/大脑等**实体图标**不在上面的 shape 表里——用
+`references/icon-library.md` 的 25 个图标（`shape=image` + 手绘单色 SVG 的
+URL 编码 data URI，**零外部依赖**，draw.io 桌面/网页/导出一致渲染）。复制
+paste-ready 片段后改 `x/y` 与 `id` 即可：
+
+```xml
+<mxCell id="icn_gpu" value="gpu · GPU" style="shape=image;verticalLabelPosition=bottom;verticalAlign=top;align=center;aspect=fixed;image=data:image/svg+xml,%3Csvg%20..." vertex="1" parent="1">
+  <mxGeometry x="40" y="40" width="48" height="56" as="geometry"/>
+</mxCell>
+```
+
+要点（否则渲染成灰框/0×0）：
+- **编码**：`urllib.parse.quote(svg, safe='')` 全量百分号编码——data URI 内
+  不许有裸 `; = " < > # &` 空格；**禁** `;charset=utf-8`/`;base64` 后缀
+  （`;` 会被 style 解析器截断 URI）。
+- `aspect=fixed`（不是 `fixed1`）；SVG 必须自含、带 `viewBox`、无 `<?xml?>` 声明。
+- 图标是无边的普通 vertex，不参与走线检查；标签放图标下方
+  （`verticalLabelPosition=bottom;verticalAlign=top;`）。
+- **换色**：`currentColor` 对 `shape=image` 无效（经 `<img>` 渲染，无 CSS 继承）——
+  改 SVG 内 stroke 十六进制后跑 `scripts/build_icon_library.py --stroke #RRGGBB`
+  一键重生成库文件/预览/目录块。
+
 ### 复合图元：matrix（相似度矩阵/蒸馏目标）
 
 一个直角矩形（标签放底部）+ 若干条**子边**画网格线（注意子边 parent

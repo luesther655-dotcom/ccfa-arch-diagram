@@ -1,0 +1,229 @@
+<mxlibrary title="ccfa-arch-diagram icons" tags="icons,ml,architecture">
+[
+ {
+  "title": "image · 图像",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20x%3D%273%27%20y%3D%274%27%20width%3D%2718%27%20height%3D%2716%27%20rx%3D%272%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Ccircle%20cx%3D%278.5%27%20cy%3D%279%27%20r%3D%271.6%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M4.5%2016.5l4.5-4.5%203.2%203.2%203-3%204.3%204.3%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linejoin%3D%27round%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa data image"
+ },
+ {
+  "title": "text · 文本",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20x%3D%273%27%20y%3D%274%27%20width%3D%2718%27%20height%3D%2716%27%20rx%3D%272%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M6%208.5h12M6%2012.5h12M6%2016.5h8%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa data text"
+ },
+ {
+  "title": "video · 视频",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20x%3D%273%27%20y%3D%275%27%20width%3D%2718%27%20height%3D%2714%27%20rx%3D%272%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M10%209.5l4.5%202.5-4.5%202.5z%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa data video"
+ },
+ {
+  "title": "audio · 音频",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M4%209.5h3.5L12%205.5v13l-4.5-4H4z%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linejoin%3D%27round%27%2F%3E%3Cpath%20d%3D%27M15.5%209.5c1%201.4%201%203.6%200%205M18%207c2%202.4%202%207.6%200%2010%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa data audio"
+ },
+ {
+  "title": "document · 文档",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M6.5%203.5H14l3.5%203.5v13.5h-11z%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linejoin%3D%27round%27%2F%3E%3Cpath%20d%3D%27M14%203.5v3.5h3.5M9%2011.5h6M9%2015h4%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa data document"
+ },
+ {
+  "title": "dataset · 数据集",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20x%3D%273%27%20y%3D%274.5%27%20width%3D%2718%27%20height%3D%274.5%27%20rx%3D%271.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Crect%20x%3D%274.5%27%20y%3D%279.75%27%20width%3D%2715%27%20height%3D%274.5%27%20rx%3D%271.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Crect%20x%3D%276%27%20y%3D%2715%27%20width%3D%2712%27%20height%3D%274.5%27%20rx%3D%271.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa data dataset"
+ },
+ {
+  "title": "folder · 文件夹",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M3.5%207.5a2%202%200%200%201%202-2h4l2%202h7a2%202%200%200%201%202%202v8a2%202%200%200%201-2%202h-13a2%202%200%200%201-2-2z%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa data folder"
+ },
+ {
+  "title": "gpu · GPU",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20x%3D%273%27%20y%3D%274%27%20width%3D%2718%27%20height%3D%2711%27%20rx%3D%271.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Crect%20x%3D%276.5%27%20y%3D%277%27%20width%3D%273%27%20height%3D%274%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Crect%20x%3D%2711%27%20y%3D%277%27%20width%3D%273%27%20height%3D%274%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M6.5%2018.5h11M4%2015v3.5M20%2015v3.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa hardware gpu"
+ },
+ {
+  "title": "cpu · CPU",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20x%3D%277%27%20y%3D%277%27%20width%3D%2710%27%20height%3D%2710%27%20rx%3D%271%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Crect%20x%3D%2710%27%20y%3D%2710%27%20width%3D%274%27%20height%3D%274%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M9.5%204v3M12%204v3M14.5%204v3M9.5%2017v3M12%2017v3M14.5%2017v3M4%209.5h3M4%2012h3M4%2014.5h3M17%209.5h3M17%2012h3M17%2014.5h3%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa hardware cpu"
+ },
+ {
+  "title": "server · 服务器",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20x%3D%274%27%20y%3D%273%27%20width%3D%2716%27%20height%3D%2718%27%20rx%3D%271.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M7%208h10M7%2012h10M7%2016h10%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%275.5%27%20r%3D%270.9%27%20fill%3D%27%235F6368%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%279.5%27%20r%3D%270.9%27%20fill%3D%27%235F6368%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2713.5%27%20r%3D%270.9%27%20fill%3D%27%235F6368%27%2F%3E%3Ccircle%20cx%3D%279%27%20cy%3D%2717.5%27%20r%3D%270.9%27%20fill%3D%27%235F6368%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa hardware server"
+ },
+ {
+  "title": "cloud · 云",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M6.5%2018A4.5%204.5%200%200%201%206%209.5%206.5%206.5%200%200%201%2018.5%2010.5%204%204%200%200%201%2017.5%2018Z%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa hardware cloud"
+ },
+ {
+  "title": "database · 数据库",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cellipse%20cx%3D%2712%27%20cy%3D%276%27%20rx%3D%278%27%20ry%3D%272.6%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M4%206v12c0%201.5%203.6%202.6%208%202.6s8-1.1%208-2.6V6%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M4%2012c0%201.5%203.6%202.6%208%202.6s8-1.1%208-2.6%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa hardware database"
+ },
+ {
+  "title": "hpc · 集群",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20x%3D%274%27%20y%3D%274%27%20width%3D%277%27%20height%3D%277%27%20rx%3D%271.2%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Crect%20x%3D%2713%27%20y%3D%274%27%20width%3D%277%27%20height%3D%277%27%20rx%3D%271.2%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Crect%20x%3D%274%27%20y%3D%2713%27%20width%3D%277%27%20height%3D%277%27%20rx%3D%271.2%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Crect%20x%3D%2713%27%20y%3D%2713%27%20width%3D%277%27%20height%3D%277%27%20rx%3D%271.2%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M7.5%2011v2M11%207.5h2M11%2016.5h2M16.5%2011v2%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa hardware hpc"
+ },
+ {
+  "title": "person · 人",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%278%27%20r%3D%273.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M5%2020c0-3.6%203.1-5.6%207-5.6s7%202%207%205.6%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa human person"
+ },
+ {
+  "title": "brain · 大脑",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M12%2021c-4.5%200-7-2.4-7-5.5%200-1.9%201-3.6%202.6-4.6C6.9%209.3%208.2%206.7%2011%205.9%2011.4%204.3%2012.6%203.5%2014%203.5c2.6%200%204.7%202%205.6%205%20.9.4%201.6%201%202.1%201.8.9%201.3.5%203.3-1.4%204.2%201%201%201.5%202.2%201.5%203.5%200%203.1-2.5%203-5%203z%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa human brain"
+ },
+ {
+  "title": "eye · 注意力",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M2.8%2012S6%205.8%2012%205.8%2021.2%2012%2021.2%2012%2018%2018.2%2012%2018.2%202.8%2012%202.8%2012z%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linejoin%3D%27round%27%2F%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%272.8%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa human eye"
+ },
+ {
+  "title": "cell · 细胞",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%278.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%274%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M12%203.5V6M12%2018v3.5M3.5%2012H6M18%2012h3.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa human cell"
+ },
+ {
+  "title": "robot · 机器人",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20x%3D%275%27%20y%3D%278%27%20width%3D%2714%27%20height%3D%2710%27%20rx%3D%272%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Ccircle%20cx%3D%279.5%27%20cy%3D%2713%27%20r%3D%271%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Ccircle%20cx%3D%2714.5%27%20cy%3D%2713%27%20r%3D%271%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M12%208V6M12%204.5a.75.75%200%201%200%200-1.5.75.75%200%200%200%200%201.5z%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3Cpath%20d%3D%27M8%2018v2M16%2018v2%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa human robot"
+ },
+ {
+  "title": "search · 检索",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Ccircle%20cx%3D%2710.5%27%20cy%3D%2710.5%27%20r%3D%276%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M15%2015l5%205%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa tool search"
+ },
+ {
+  "title": "camera · 相机",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M4%208a2%202%200%200%201%202-2h2l1.5-2.5h5L16%206h2a2%202%200%200%201%202%202v9a2%202%200%200%201-2%202H6a2%202%200%200%201-2-2z%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linejoin%3D%27round%27%2F%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712.5%27%20r%3D%273.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa tool camera"
+ },
+ {
+  "title": "gear · 参数",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%273.2%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M12%202.5v3.2M12%2018.3v3.2M2.5%2012h3.2M18.3%2012h3.2M5.2%205.2l2.3%202.3M16.5%2016.5l2.3%202.3M18.8%205.2l-2.3%202.3M7.5%2016.5l-2.3%202.3%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa tool gear"
+ },
+ {
+  "title": "clock · 时间",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%278.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M12%207v5l3.5%202%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa tool clock"
+ },
+ {
+  "title": "globe · 全球",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%278.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cellipse%20cx%3D%2712%27%20cy%3D%2712%27%20rx%3D%273.5%27%20ry%3D%278.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M3.5%2012h17%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa tool globe"
+ },
+ {
+  "title": "mask · 掩码",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20x%3D%273%27%20y%3D%274%27%20width%3D%2718%27%20height%3D%2716%27%20rx%3D%272%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M3%2016l6-6%204%204%208-8%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linejoin%3D%27round%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa model mask"
+ },
+ {
+  "title": "token · Token",
+  "data": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M10%203.5L8%2020.5M16%203.5L14%2020.5M4.5%209h15M3.5%2015h15%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E",
+  "w": 48,
+  "h": 56,
+  "aspect": "fixed",
+  "style": "verticalLabelPosition=bottom;verticalAlign=top;align=center;",
+  "tags": "ccfa model token"
+ }
+]
+</mxlibrary>
