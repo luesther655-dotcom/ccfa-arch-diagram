@@ -41,6 +41,7 @@ The skill's own architecture, drawn by the skill itself — editable source: [`e
 - **Hand-authored draw.io XML** — every diagram is written directly as editable `.drawio` XML following a strict layout discipline (10-px grid, port slot formula, title-band clearance), so the result is a real, editable diagram.
 - **Five proven archetypes** — pipeline-with-zoom, multi-panel training, multi-agent system, reasoning-stage containers, and framework bands cover the shapes that actually recur in CCF-A figures.
 - **Deterministic structural validation** — `validate.py` lints for overlaps, crossings, title-band intrusions, port stacking, oversized canvases, and dangling edges *before* you export; `edgeports.py` / `respread_ports.py` auto-fix stacked ports.
+- **Intent invariants without a renderer** — `validate.py --recipe` turns "would-need-目检" defects into deterministic checks (arrow stabbing through its own node, op-circle direction vs `↑`/`↓`, text overflow, and symmetric-U centring/mirror/horizontal-skips/density); `fix_layout.py` auto-fixes the machine-fixable ones in a detect→fix→re-verify loop, so a clean `--strict --recipe` run is the delivery gate even on machines with no draw.io CLI.
 - **Academic styling** — six built-in palettes, Times New Roman labels, translucent containers, op-circles, `×N` repetition markers, legends, and figure captions.
 - **Icon asset pack** — 25 hand-drawn monochrome SVG line icons (GPU/cloud/database/person/eye/brain/…), embedded as zero-dependency `shape=image` data URIs; recolor the whole set with one command (see [`references/icon-library.md`](references/icon-library.md)).
 - **Personal style presets** — "use my `<name>` style", or teach it the palette from an existing figure; presets live in `~/.ccfa-arch-diagram/styles/`.
@@ -147,14 +148,14 @@ Contributions are welcome! The most useful contributions for a research-tooling 
 ## Quality Assurance
 
 - **Completeness** — input is graded by type: with model code, every module along the `forward()` chain is registered; with a vague description, authoritative sources (paper / official docs / arXiv) are consulted first; when nothing authoritative exists, the skill draws the nearest well-known architecture and clearly marks the assumptions for review.
-- **No overlap, no crossings** — hand-computed layout discipline (grid, margins, port slot formula) + `scripts/validate.py` deterministic lint + visual self-check (≤2 fix rounds).
+- **No overlap, no crossings, no wrong intent** — hand-computed layout discipline (grid, margins, port slot formula) + `scripts/validate.py` deterministic lint + `--recipe` semantic invariants + `fix_layout.py` auto-fix, with the visual self-check (≤2 fix rounds) demoted to a residual safety net. A `validate --strict --recipe` 0/0 run is a renderer-free delivery gate.
 - **Aesthetics** — archetype recipes + density floor (minimum components/edges) + academic palettes + top-venue finishing (Times New Roman, translucent containers, captions, legends).
 
 ## Dependencies
 
 - **draw.io desktop** — required for PNG/SVG preview and export: [drawio-desktop releases](https://github.com/jgraph/drawio-desktop/releases), or the web app at [app.diagrams.net](https://app.diagrams.net). The `.drawio` file itself can be produced without it.
-- **Python 3** (optional, stdlib only) — runs `scripts/validate.py`, `edgeports.py`, `respread_ports.py`; `scripts/build_icon_library.py` regenerates the icon asset pack from its manifest.
-- **A vision-capable model** — used for the visual self-check step.
+- **Python 3** (optional, stdlib only) — runs `scripts/validate.py` (incl. `--recipe` semantic invariants), `fix_layout.py`, `edgeports.py`, `respread_ports.py`; `scripts/build_icon_library.py` regenerates the icon asset pack from its manifest.
+- **A vision-capable model** — used for the visual self-check step, now a residual safety net: the deterministic checks cover the structural *and* intent defect classes.
 
 ## License
 

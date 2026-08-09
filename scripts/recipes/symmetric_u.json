@@ -1,0 +1,15 @@
+{
+  "name": "symmetric_u",
+  "description": "Encoder-decoder symmetric-U figure (UNet / hourglass / MAE): two mirror arms, a corridor-centered bottleneck hanging at the U bottom, horizontal skip connections, and a density floor. The cells named below are the ids of the delivered figure - copy and rename for a new figure.",
+  "arms": ["g_enc", "g_dec"],
+  "corridor": {"centered": "bot", "tol_px": 10},
+  "mirror_pairs": [
+    ["e1", "d1"], ["e2", "d2"], ["e3", "d3"], ["e4", "d4"],
+    ["mp1", "upc3"], ["mp2", "upc2"], ["mp3", "upc1"], ["mp4", "upc_b"]
+  ],
+  "mirror_tol_px": 8,
+  "horizontal_edges": ["e_sk1", "e_sk2", "e_sk3", "e_sk4"],
+  "horizontal_tol_px": 4,
+  "min_components": 20,
+  "min_edges": 20
+}

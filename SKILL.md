@@ -107,15 +107,26 @@ U-Net/编码器-解码器 → 对称 U 型（三段水平居中，Bottleneck 置
 **写完必做结构校验（draw.io 都不需要启动）**：
 
 ```bash
-python3 scripts/validate.py <name>.drawio     # 重叠/骑跨/标题带侵入/端口堆叠/超宽/悬空边/箭头穿标题/箭头穿字
+python3 scripts/validate.py <name>.drawio                 # 几何/结构：重叠/骑跨/标题带/端口堆叠/超宽/悬空边/箭头穿字
+python3 scripts/validate.py <name>.drawio --recipe symmetric_u --strict   # 对称 U 型图再加语义不变量，0/0 才算过
 ```
 
 - **error 必须清零**才进 Step 3；warning 逐条修（它们几乎都是真实的
   走线/布局缺陷——评测事故图的全部问题都能被它提前报出）。
+- **语义不变量把"以前只有目检能发现"的缺陷变成确定性检查**（validate 直接
+  由几何重新推导，不依赖渲染）：① 箭头**穿自己的节点**钉在远侧端口（读起来
+  像没接上）；② op 圆出边方向与 `↑`/`↓` 语义相反；③ 文字溢出 chip；
+  ④ 对称 U 型：Bottleneck 不居中、两臂不镜像、跳跃线不水平、密度不达标。
+  对应原型图的配方在 `scripts/recipes/<name>.json`（`symmetric_u` 已内置），
+  新图画完把 ids 抄进配方即可启用 ④。
 - 报"同侧未钉端口堆叠"→ 跑 `python3 scripts/edgeports.py <name>.drawio`
   自动按对端位置分散（跳过你手钉的端口，幂等）；
   报"已钉端口撞槽"→ 跑 `python3 scripts/respread_ports.py <name>.drawio`
   按槽位公式 (i+1)/(k+1) 重铺（字节精确，不动其他内容）。
+- **检测→修复→复检闭环**：validate 报居中偏移/箭头穿节点/op 方向 → 跑
+  `python3 scripts/fix_layout.py <name>.drawio --recipe symmetric_u --apply`
+  自动重算 x、翻转 entry/exit 侧、拉净空（默认 dry-run 预览，`--apply` 才
+  落盘，幂等），再跑 validate 确认归零。
 - 修完再跑一遍 validate 确认归零。**没有 Python 时**跳过本步，靠 Step 4
   视觉自检兜底（但自检轮次预算不变）。
 
@@ -137,10 +148,13 @@ Step 3-4，直接交付 `.drawio`，告知用户用 draw.io 桌面端/网页版�
 **读回 `<name>.png`**，对照 `references/drawio-xml-guide.md` 第 9 节
 自检清单检查：重叠、文字溢出、容器标题被压、箭头没接上、边穿图元、
 同侧端口叠成一股、线条因图过宽而隐形、密度达标。
-（结构类问题理论上 Step 2 的 validate.py 已清零，目检聚焦视觉观感。）
+（Step 2 的 validate.py + recipe 已把结构类**和**语义类（居中/镜像/跳跃
+水平/箭头穿节点/op 方向/文字溢出）清零——目检只兜底规则未覆盖的观感
+边角，**不再承担发现已知缺陷类型的角色**。）
 就地改 XML（单点问题）或重写（整体方向问题），重新导出，**最多 2 轮**
 自检后交付用户过目；用户反馈循环最多 5 轮后建议其在 draw.io 里手动微调。
-预览 PNG 每轮覆盖同名文件。
+预览 PNG 每轮覆盖同名文件。**无 CLI 环境**下，validate 带 recipe 0/0
+即可交付 `.drawio`（语义不变量不依赖渲染）。
 
 ### Step 5 — 最终导出与交付
 用户认可后：
@@ -191,9 +205,11 @@ drawio -x -f svg -e -o <name>.svg <name>.drawio               # 矢量，投稿�
    位置排序分配**（这是出线不交叉的关键）；反方向汇入 op 圆的合流叉允许
    共享端口，同方向并行绝不允许。长边（残差/反馈/跨面板）沿外环走廊走，
    不穿图元密集区；枢纽节点放分支中间。
-7. **写完先跑 `scripts/validate.py`**：error 清零才导出；端口问题用
-   `edgeports.py` / `respread_ports.py` 兜底。**draw.io CLI 导出 =
-   唯一预览真相**；自检 ≤2 轮，用户反馈 ≤5 轮。
+7. **写完先跑 `scripts/validate.py`**：error 清零才导出；语义不变量用
+   `--recipe`（对称 U 型 → `symmetric_u`），报居中/穿节点/op 方向 →
+   `fix_layout.py --apply` 自动修复复检；端口问题用 `edgeports.py` /
+   `respread_ports.py` 兜底。**draw.io CLI 导出 = 唯一预览真相**；自检 ≤2 轮，
+   用户反馈 ≤5 轮。无 CLI 时 validate+recipe 0/0 即交付。
 8. **顶会装裱**：Times New Roman + 半透明容器 + 底部虚线图例栏（多面板系统图
    用右侧图例列）；论文投稿底部图题（"Fig. N. ..."）。
 9. **先选原型再动手**：单一网络→水平长条；训练流程→(a)(b)(c) 面板；

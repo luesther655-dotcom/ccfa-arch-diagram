@@ -10,6 +10,7 @@ other. Runs without launching draw.io - a fast pre-check before export.
 
   python3 validate.py diagram.drawio
   python3 validate.py diagram.drawio --strict --score
+  python3 validate.py unet.drawio --recipe symmetric_u   # + archetype invariants
 
 Layout model assumed (this skill writes FLAT files): every cell has
 parent="1"; a "container" is an ordinary vertex rect that fully contains other
@@ -44,7 +45,9 @@ found, so it can gate the workflow before PNG export.
 Usage: python3 validate.py <file.drawio> [--strict] [--score]
 """
 import argparse
+import json
 import math
+import os
 import sys
 import xml.etree.ElementTree as ET
 
@@ -57,6 +60,16 @@ LABEL_PAD = 4                 # px visual padding around a label's text box
 A4_LANDSCAPE_W, A4_LANDSCAPE_H = 1122, 794  # px @96dpi - the skill's print target
 ASPECT_TOLERANCE = 0.30       # content h/w may deviate up to 30% from page aspect
 PAGE_FIT_TOL = 2.0            # px slack when checking content against the page
+
+# Semantic / intent invariants (the "needs 目检" classes). Each promotes a rule
+# from the guide into a deterministic check, so a rendered PNG is not needed to
+# spot the defect class it covers.
+THROUGH_EPS = 0.6             # px - treat two points as coincident below this
+CORRIDOR_CENTER_TOL = 10      # px - U-bottleneck may deviate from corridor centre
+CORRIDOR_BELOW_SLACK = 4      # px - bottleneck centre must hang below the arms
+MIRROR_TOL = 8                # px - mirrored arm members must be level within this
+SKIP_HORIZONTAL_TOL = 4       # px - a skip edge's two ends share a height within this
+TEXT_FIT_SLACK = 3            # px - estimated text block may exceed the box by this
 
 
 def rect(cell):
@@ -419,6 +432,349 @@ def style_value(style, key):
         if part.startswith(key + "="):
             return part.split("=", 1)[1]
     return None
+
+
+# --- Semantic / intent invariants ------------------------------------------
+# The checks below are the "would otherwise need 目检" classes: an arrow that
+# stabs through its own target to a far-side port reads as "not connected"; an
+# op circle whose outgoing arrow leaves the wrong side flips the operation's
+# meaning; text wider/taller than its chip stamps over the neighbours; and a
+# symmetric-U figure with an off-centre bottleneck or unlevel arms reads sloppy
+# even though every overlap/routing check passes. Each is derived purely from
+# geometry, so the rendered PNG is not the only truth.
+
+
+def through_target_violations(cells, by_id):
+    """Waypointed edges whose first/last segment runs through their own node.
+
+    A hand-authored route that approaches a node from one side but pins the
+    port on the OPPOSITE side makes the final (or initial) segment cross the
+    node's interior and stop on the far edge. It still connects in the XML but
+    renders as "the arrow ran past and is not attached" - the class of defect
+    seen on the U-Net bottleneck edge. Returns structured violations for
+    validate (warn text) and fix_layout (auto-fix). Auto-routed edges are
+    skipped: draw.io never routes a through-the-target line itself.
+
+    Returns a list of dicts: {edge, node, end, bad_side, box} where bad_side
+    is the pinned port side that is wrong (the fix is the opposite side).
+    """
+    violations = []
+    for c in cells:
+        if c.get("edge") != "1":
+            continue
+        wps = edge_waypoints(c)
+        if not wps:
+            continue
+        style = c.get("style") or ""
+        eid = c.get("id")
+        # target end: last waypoint -> entry point
+        tid = c.get("target")
+        if tid and tid in by_id:
+            box = abs_rect(by_id[tid], by_id)
+            entry = endpoint(c, "target", by_id)
+            if box and entry:
+                ex, ey = entry
+                lx, ly = wps[-1]
+                exv, eyv = style_num(style, "entryX"), style_num(style, "entryY")
+                if eyv is not None and eyv in (0, 1) and abs(lx - ex) < THROUGH_EPS:
+                    if eyv == 1 and ly < ey - THROUGH_EPS:
+                        violations.append(
+                            {"edge": eid, "node": tid, "end": "target",
+                             "bad_side": "S", "box": box})
+                    elif eyv == 0 and ly > ey + THROUGH_EPS:
+                        violations.append(
+                            {"edge": eid, "node": tid, "end": "target",
+                             "bad_side": "N", "box": box})
+                if exv is not None and exv in (0, 1) and abs(ly - ey) < THROUGH_EPS:
+                    if exv == 1 and lx < ex - THROUGH_EPS:
+                        violations.append(
+                            {"edge": eid, "node": tid, "end": "target",
+                             "bad_side": "E", "box": box})
+                    elif exv == 0 and lx > ex + THROUGH_EPS:
+                        violations.append(
+                            {"edge": eid, "node": tid, "end": "target",
+                             "bad_side": "W", "box": box})
+        # source end: exit point -> first waypoint
+        sid = c.get("source")
+        if sid and sid in by_id:
+            box = abs_rect(by_id[sid], by_id)
+            exit_ = endpoint(c, "source", by_id)
+            if box and exit_:
+                ex, ey = exit_
+                fx, fy = wps[0]
+                exv, eyv = style_num(style, "exitX"), style_num(style, "exitY")
+                if eyv is not None and eyv in (0, 1) and abs(fx - ex) < THROUGH_EPS:
+                    if eyv == 1 and fy < ey - THROUGH_EPS:
+                        violations.append(
+                            {"edge": eid, "node": sid, "end": "source",
+                             "bad_side": "S", "box": box})
+                    elif eyv == 0 and fy > ey + THROUGH_EPS:
+                        violations.append(
+                            {"edge": eid, "node": sid, "end": "source",
+                             "bad_side": "N", "box": box})
+                if exv is not None and exv in (0, 1) and abs(fy - ey) < THROUGH_EPS:
+                    if exv == 1 and fx < ex - THROUGH_EPS:
+                        violations.append(
+                            {"edge": eid, "node": sid, "end": "source",
+                             "bad_side": "E", "box": box})
+                    elif exv == 0 and fx > ex + THROUGH_EPS:
+                        violations.append(
+                            {"edge": eid, "node": sid, "end": "source",
+                             "bad_side": "W", "box": box})
+    return violations
+
+
+def final_segment_through_target_warnings(cells, by_id):
+    """Format through_target_violations for the warning list."""
+    warns = []
+    fixes = {"source": "exit", "target": "entry"}
+    for v in through_target_violations(cells, by_id):
+        eid, nid, end, side = v["edge"], v["node"], v["end"], v["bad_side"]
+        peer = "target" if end == "source" else "source"
+        approach = {"E": "left", "W": "right", "N": "above", "S": "below"}[side]
+        entered = {"E": "RIGHT", "W": "LEFT", "N": "TOP", "S": "BOTTOM"}[side]
+        if end == "target":
+            warns.append(
+                f"edge {eid!r} approaches {nid!r} from the {approach} but "
+                f"pins its {entered} side - the line runs through the node and "
+                f"the arrow reads as unconnected; flip entry{side} to the "
+                f"opposite side (or move the last waypoint clear of the box)")
+        else:
+            warns.append(
+                f"edge {eid!r} exits {nid!r}'s {entered} side but immediately "
+                f"turns {approach}ward through it - route the edge out the "
+                f"other way (or move the first waypoint clear of the box)")
+    return warns
+
+
+def op_direction_violations(cells, by_id):
+    """Op circles (ellipse with a down/up glyph) whose outgoing arrow leaves
+    the wrong side. Returns structured {circle, edge, expected, actual}."""
+    violations = []
+    for c in cells:
+        if c.get("vertex") != "1" or is_edge_label(c):
+            continue
+        style = c.get("style") or ""
+        if not style_has(style, "ellipse"):
+            continue
+        value = (c.get("value") or "").strip()
+        expected = None
+        if "↓" in value:      # ↓ - down-sampling: output exits the bottom
+            expected = "S"
+        elif "↑" in value:    # ↑ - up-sampling: output exits the top
+            expected = "N"
+        if expected is None:
+            continue
+        cid = c.get("id")
+        out = None
+        for e in cells:
+            if e.get("edge") == "1" and e.get("source") == cid:
+                out = e
+                break
+        if out is None:
+            continue  # legend glyph / lone symbol - no route to mis-orient
+        actual, _ = _side_of(out, "source", by_id)
+        # The glyph only encodes flow DIRECTION when the chain runs vertically:
+        # on a horizontal chain (prototype A pipeline) an up-sample op's ↑ is an
+        # OPERATION tag and its output legitimately leaves the side (E/W) toward
+        # the next block. Only judge vertical out-edges, where a mismatch really
+        # reads as an arrow pointing the wrong way.
+        if actual in ("N", "S") and actual != expected:
+            violations.append(
+                {"circle": cid, "edge": out.get("id"),
+                 "expected": expected, "actual": actual})
+    return violations
+
+
+def op_circle_direction_warnings(cells, by_id):
+    """Format op_direction_violations for the warning list."""
+    warns = []
+    labels = {"N": "up-conv", "S": "down-sample"}
+    for v in op_direction_violations(cells, by_id):
+        warns.append(
+            f"op circle {v['circle']!r} is a {labels[v['expected']]} but its "
+            f"outgoing edge {v['edge']!r} leaves the {v['actual']} side - the "
+            f"arrow reads backwards; flip the exit port to {v['expected']} "
+            f"(or correct the symbol)")
+    return warns
+
+
+def vertex_label_fit_warnings(cells):
+    """Text must fit inside its chip (the guide's "box ≈ text + 8-12px" rule).
+
+    A non-wrapping box whose widest line is wider than the box, or a wrapping
+    box taller than the box once its lines wrap to the available width, lets
+    the label stamp over the neighbouring figure - a 目检-only catch until now.
+    The estimators are deliberately not exact (Latin/digit ≈ 0.55em, CJK ≈
+    1.0em, line ≈ 1.25em matching draw.io's HTML line spacing), and the trigger
+    is proportional (25% taller than the box) so only CLEAR overflow fires -
+    a label a couple of px over the box centre is harmless.
+    """
+    warns = []
+    for c in cells:
+        if c.get("vertex") != "1" or is_edge_label(c) or is_text_cell(c):
+            continue
+        value = (c.get("value") or "").strip()
+        if not value:
+            continue
+        text = value.replace("<br>", "\n").replace("&#10;", "\n").strip()
+        r = rect(c)
+        if r is None or any(v != v for v in r) or r[2] <= 0 or r[3] <= 0:
+            continue
+        style = c.get("style") or ""
+        cid = c.get("id")
+        fs = style_num(style, "fontSize") or 10.0
+        spacing = style_num(style, "spacing") or 0.0
+        if style_has(style, "whiteSpace=wrap"):
+            avail_w = max(4.0, r[2] - 2 * spacing - 2)
+            lines = 0
+            for raw in text.split("\n"):
+                cur = ""
+                for word in raw.split(" "):
+                    trial = (cur + " " + word).strip()
+                    if label_width(trial, style) <= avail_w or not cur:
+                        cur = trial
+                    else:
+                        lines += 1
+                        cur = word
+                lines += 1
+            need_h = lines * fs * 1.25 + 2 * spacing
+            if need_h > r[3] * 1.25 + TEXT_FIT_SLACK:
+                warns.append(
+                    f"label of box {cid!r} needs ~{need_h:g}px height once "
+                    f"wrapped ({lines} lines) but the box is only {r[3]:g}px "
+                    f"tall - text overflows; shorten the label or grow the box")
+        else:
+            widest = label_width(text, style)
+            avail_w = r[2] - 2 * spacing - 2
+            if widest > avail_w + TEXT_FIT_SLACK:
+                warns.append(
+                    f"label of box {cid!r} is ~{widest:g}px wide but the box "
+                    f"is {r[2]:g}px - text escapes the chip; widen the box or "
+                    f"add whiteSpace=wrap")
+    return warns
+
+
+def load_recipe(name, script_dir):
+    """Load a per-figure archetype recipe (recipes/<name>.json)."""
+    if name.endswith(".json"):
+        path = name
+    else:
+        path = os.path.join(script_dir, "recipes", name + ".json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError) as exc:
+        sys.exit(f"error: cannot load recipe {name!r} ({path}): {exc}")
+
+
+def recipe_violations(cells, by_id, recipe):
+    """Archetype invariants re-derived from geometry.
+
+    A recipe is a tiny JSON that names which cells play which roles in a figure
+    archetype. It turns the guide's layout rules ("Bottleneck 置中", "臂成员
+    y 镜像", "跳跃线水平", density floors) into checks, so an off-centre
+    bottleneck is caught before anyone opens draw.io. Returns structured
+    violations; the centering kind carries a ready-made fix (new_x).
+    """
+    name = recipe.get("name", "?")
+    tag = f"[{name}]"
+    violations = []
+
+    def r(id_):
+        cell = by_id.get(id_)
+        return abs_rect(cell, by_id) if cell is not None else None
+
+    arms = recipe.get("arms")
+    corr = recipe.get("corridor", {})
+    centered = corr.get("centered")
+    tol = corr.get("tol_px", CORRIDOR_CENTER_TOL)
+    if arms and centered:
+        ar = [a for a in (r(x) for x in arms) if a]
+        # The corridor sits between the arms, leftmost arm to rightmost arm
+        # (sorted by centre-x so the recipe need not state left/right order).
+        ar = sorted(ar, key=lambda a: a[0] + a[2] / 2)
+        if ar:
+            left = ar[0][0] + ar[0][2]   # right edge of the left arm
+            right = ar[-1][0]            # left edge of the right arm
+            if left < right:
+                center = (left + right) / 2
+                br = r(centered)
+                if br:
+                    cxc = br[0] + br[2] / 2
+                    if abs(cxc - center) > tol:
+                        new_x = center - br[2] / 2
+                        violations.append({
+                            "kind": "centering",
+                            "id": centered,
+                            "fix": {"id": centered, "new_x": new_x},
+                            "detail": (f"{tag} corridor element {centered!r} is "
+                                       f"off-centre: centre {cxc:g}px vs corridor "
+                                       f"centre {center:g}px, {abs(cxc - center):g}px "
+                                       f"off - shift x to {new_x:g}")})
+                    bottom = max(a[1] + a[3] for a in ar)
+                    if br[1] + br[3] / 2 < bottom - CORRIDOR_BELOW_SLACK:
+                        violations.append({
+                            "kind": "bottleneck_below",
+                            "id": centered,
+                            "detail": (f"{tag} corridor element {centered!r} "
+                                       f"sits above the arms' bottom ({bottom:g}px) "
+                                       f"- the U-bottleneck should hang in the "
+                                       f"lower corridor")})
+    for a, b in recipe.get("mirror_pairs", []):
+        ra, rb = r(a), r(b)
+        if ra and rb:
+            ya = ra[1] + ra[3] / 2
+            yb = rb[1] + rb[3] / 2
+            if abs(ya - yb) > recipe.get("mirror_tol_px", MIRROR_TOL):
+                violations.append({
+                    "kind": "mirror",
+                    "id": a,
+                    "detail": (f"{tag} mirror pair {a!r}/{b!r} are not level: "
+                               f"centre-y {ya:g} vs {yb:g} - the two arms should "
+                               f"mirror vertically")})
+    for eid in recipe.get("horizontal_edges", []):
+        edge = by_id.get(eid)
+        if edge is None or edge.get("edge") != "1":
+            continue
+        s, t = edge.get("source"), edge.get("target")
+        rs, rt = r(s), r(t)
+        if rs and rt:
+            sy = rs[1] + rs[3] / 2
+            ty = rt[1] + rt[3] / 2
+            if abs(sy - ty) > recipe.get("horizontal_tol_px", SKIP_HORIZONTAL_TOL):
+                violations.append({
+                    "kind": "skip_horizontal",
+                    "id": eid,
+                    "detail": (f"{tag} skip edge {eid!r} is not horizontal: "
+                               f"source centre-y {sy:g} vs target centre-y "
+                               f"{ty:g} - a skip connection should run level")})
+    if "min_components" in recipe or "min_edges" in recipe:
+        comps = sum(1 for c in cells
+                    if c.get("vertex") == "1" and not is_edge_label(c)
+                    and not is_text_cell(c))
+        edges = sum(1 for c in cells
+                    if c.get("edge") == "1" and c.get("source") and c.get("target"))
+        mc = recipe.get("min_components")
+        me = recipe.get("min_edges")
+        if mc and comps < mc:
+            violations.append({
+                "kind": "density_component",
+                "id": None,
+                "detail": (f"{tag} sparse: {comps} components < {mc} - walk the "
+                           f"Step 0 checklist and fill in missing blocks")})
+        if me and edges < me:
+            violations.append({
+                "kind": "density_edge",
+                "id": None,
+                "detail": (f"{tag} sparse: {edges} edges < {me} - wire up the "
+                           f"sub-modules and add feature/tensor labels")})
+    return violations
+
+
+def recipe_warnings(cells, by_id, recipe):
+    """Format recipe_violations for the warning list."""
+    return [v["detail"] for v in recipe_violations(cells, by_id, recipe)]
 
 
 def label_width(value, style):
@@ -1033,8 +1389,13 @@ def cells_by_id(cells, cid):
     return None
 
 
-def check_page(diagram):
-    """Return (errors, warnings) for one <diagram> page."""
+def check_page(diagram, recipe=None):
+    """Return (errors, warnings) for one <diagram> page.
+
+    ``recipe`` is an optional per-figure archetype spec (see load_recipe) that
+    adds the semantic invariant checks (corridor centring, arm mirroring,
+    horizontal skips, density) on top of the generic structural lints.
+    """
     name = diagram.get("name", "?")
     model = diagram.find("mxGraphModel")
     if model is None:
@@ -1126,6 +1487,11 @@ def check_page(diagram):
     warns += title_clearance_warnings(cells, ids)
     warns += page_fit_warnings(model.get("pageWidth"), model.get("pageHeight"),
                                cells, ids)
+    warns += final_segment_through_target_warnings(cells, ids)
+    warns += op_circle_direction_warnings(cells, ids)
+    warns += vertex_label_fit_warnings(cells)
+    if recipe is not None:
+        warns += recipe_warnings(cells, ids, recipe)
     # Content width cap: beyond ~2200px the --width 2000 preview downscale
     # makes 1.2px strokes and 10-12px fonts illegible.
     max_x = 0.0
@@ -1150,15 +1516,23 @@ def main():
     ap.add_argument("--score", action="store_true",
                     help="also print a readability score (lower is better) - "
                          "useful for comparing layout variants of the same graph")
+    ap.add_argument("--recipe", metavar="NAME",
+                    help="apply archetype invariants from recipes/NAME.json "
+                         "(corridor centring, arm mirroring, horizontal skips, "
+                         "density floors)")
     args = ap.parse_args()
     try:
         tree = ET.parse(args.file)
     except (ET.ParseError, OSError) as exc:
         sys.exit(f"error: cannot parse {args.file}: {exc}")
+    recipe = None
+    if args.recipe:
+        recipe = load_recipe(args.recipe,
+                             os.path.dirname(os.path.abspath(__file__)))
     pages = tree.getroot().findall("diagram") or [tree.getroot()]
     errors, warns = [], []
     for page in pages:
-        e, w = check_page(page)
+        e, w = check_page(page, recipe)
         errors += e
         warns += w
     for w in warns:

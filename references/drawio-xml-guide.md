@@ -398,6 +398,15 @@ drawio -x -f svg -e -o figure.svg figure.drawio     # 矢量，投稿推荐
 重叠、骑跨、标题带侵入、端口堆叠、标签超宽、标签底色、贴边、超宽、
 **A4 适配、箭头穿字**在这一步就该清零，不要留给肉眼。
 
+**第 0.5 步（语义不变量，也无须渲染）**：对称 U 型图加
+`--recipe symmetric_u`，把以前只有目检能发现的缺陷变成确定性告警：
+① 箭头**穿自己的节点**钉在远侧端口（读起来像没接上）；② op 圆出边方向与
+`↑`/`↓` 语义相反；③ 文字溢出 chip；④ Bottleneck 居中、两臂镜像、跳跃线
+水平、密度下限（配方在 `scripts/recipes/symmetric_u.json`，新图画完把 ids
+抄进去即可启用）。报①-③ → `python3 scripts/fix_layout.py <file>
+--recipe symmetric_u --apply` 自动重算 x / 翻转 entry·exit 侧 / 拉净空，
+复检归零——**不需要打开 draw.io 也不需要看图**。
+
 **第 1 步（视觉检查）**，导出预览 PNG 后逐项对照：
 
 | 检查 | 修复 |
@@ -407,6 +416,9 @@ drawio -x -f svg -e -o figure.svg figure.drawio     # 矢量，投稿推荐
 | 容器标题被成员压字 | 成员下移出 24px 标题带，或加高容器 |
 | 箭头没接上/游离线 | 核对 source/target id 存在；游离线是编辑器拆的——补回 source+target（见 §3 铁律），validate.py 已报 `detached` |
 | 箭头沿盒子边横滑（看似没连上） | 最后一个拐点与目标边共线——把拐点挪到目标边之外、与入口点同轴（见 §3 入口垂直铁律） |
+| 箭头穿自己的节点钉在远侧端口（看似没接上） | validate 报 `runs through the node`——翻转 entry/exit 侧到实际来向、把相邻拐点拉出净空（`fix_layout.py` 自动修） |
+| op 圆箭头方向与 `↑`/`↓` 语义相反 | validate 报 `reads backwards`——`↑` 出边必须朝上、`↓` 朝下（`fix_layout.py` 自动修） |
+| 对称 U 型 Bottleneck 不居中 / 两臂不镜像 / 跳跃线不水平 | validate `--recipe symmetric_u` 报 `off-centre` / `not level` / `not horizontal`——居中可自动修，其余按告警值手动对齐 |
 | 边穿过无关图元 | 加 `<Array as="points">` 拐点沿走廊绕行 |
 | 同侧箭头叠成一股 | 按槽位公式 (i+1)/(k+1) 分散端口；或跑 edgeports.py / respread_ports.py |
 | 边标签悬空压线 | 补 `labelBackgroundColor=#FFFFFF` + x/y 偏移 |
