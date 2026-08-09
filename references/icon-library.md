@@ -203,7 +203,7 @@ python3 scripts/build_icon_library.py --stroke #3A4A5A
 **paste-ready**（改 `x/y` 与 `id` 后直接用）：
 
 ```xml
-<mxCell id="icn_gpu" value="gpu · GPU" style="shape=image;verticalLabelPosition=bottom;verticalAlign=top;align=center;aspect=fixed;image=data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20x%3D%273%27%20y%3D%274%27%20width%3D%2718%27%20height%3D%2711%27%20rx%3D%271.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Crect%20x%3D%276.5%27%20y%3D%277%27%20width%3D%273%27%20height%3D%274%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Crect%20x%3D%2711%27%20y%3D%277%27%20width%3D%273%27%20height%3D%274%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M6.5%2018.5h11M4%2015v3.5M20%2015v3.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E" vertex="1" parent="1">
+<mxCell id="icn_gpu" value="gpu · GPU" style="shape=image;verticalLabelPosition=bottom;verticalAlign=top;align=center;aspect=fixed;image=data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20x%3D%273%27%20y%3D%274.5%27%20width%3D%2718%27%20height%3D%2710%27%20rx%3D%271.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Crect%20x%3D%279.5%27%20y%3D%277%27%20width%3D%275%27%20height%3D%275%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Crect%20x%3D%2711%27%20y%3D%278.5%27%20width%3D%272%27%20height%3D%272%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%2F%3E%3Cpath%20d%3D%27M7%2014.5v1.5M9.5%2014.5v1.5M12%2014.5v1.5M14.5%2014.5v1.5M17%2014.5v1.5%27%20fill%3D%27none%27%20stroke%3D%27%235F6368%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E" vertex="1" parent="1">
   <mxGeometry x="0" y="0" width="48" height="56" as="geometry"/>
 </mxCell>
 ```
@@ -211,7 +211,7 @@ python3 scripts/build_icon_library.py --stroke #3A4A5A
 **raw SVG**（改 stroke 换色后跑 `build_icon_library.py --stroke ...` 重生成）：
 
 ```svg
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='4' width='18' height='11' rx='1.5' fill='none' stroke='#5F6368' stroke-width='1.5'/><rect x='6.5' y='7' width='3' height='4' fill='none' stroke='#5F6368' stroke-width='1.5'/><rect x='11' y='7' width='3' height='4' fill='none' stroke='#5F6368' stroke-width='1.5'/><path d='M6.5 18.5h11M4 15v3.5M20 15v3.5' fill='none' stroke='#5F6368' stroke-width='1.5' stroke-linecap='round'/></svg>
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='4.5' width='18' height='10' rx='1.5' fill='none' stroke='#5F6368' stroke-width='1.5'/><rect x='9.5' y='7' width='5' height='5' fill='none' stroke='#5F6368' stroke-width='1.5'/><rect x='11' y='8.5' width='2' height='2' fill='none' stroke='#5F6368' stroke-width='1.5'/><path d='M7 14.5v1.5M9.5 14.5v1.5M12 14.5v1.5M14.5 14.5v1.5M17 14.5v1.5' fill='none' stroke='#5F6368' stroke-width='1.5' stroke-linecap='round'/></svg>
 ```
 
 #### `cpu` · cpu · CPU（硬件/部署）
