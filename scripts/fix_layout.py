@@ -17,6 +17,16 @@ What is auto-fixed:
   - op circle wrong exit side (generic)    : repoint the exit port to the side
                                              the glyph promises (up-conv -> N,
                                              down-sample -> S)
+  - wrap-around edge (generic)             : flip the entry side to the face
+                                             that actually points at the source,
+                                             killing the 打环 loop detour
+  - misaligned straight pair (generic)     : slot both ports to the shared
+                                             height/width so the router emits a
+                                             single straight connector
+  - formula not bold (generic)             : set fontStyle=1 on math cells
+  - port pinned on a scrambled cube        : drop direction=south (back to the
+    (generic)                              north default) so cubePerimeter
+                                             honours the pins
 
 What is only reported (needs a human hand, or is outside this pass's remit):
   mirror misalignment, non-horizontal skips, density floors, and any residual
@@ -57,6 +67,56 @@ def set_port(style, end, px, py):
     parts += [f"{prefix}X={px:g}", f"{prefix}Y={py:g}",
               f"{prefix}Dx=0", f"{prefix}Dy=0"]
     return ";".join(parts) + ";"
+
+
+def _style_drop(style, key):
+    """Return style with every token whose key == ``key`` removed."""
+    parts = [p for p in (style or "").split(";")
+             if p and p.split("=", 1)[0] != key]
+    return ";".join(parts) + ";"
+
+
+def _style_set_num(style, key, value):
+    """Return style with numeric token ``key=value`` set (replacing any old)."""
+    parts = [p for p in (style or "").split(";")
+             if p and p.split("=", 1)[0] != key]
+    parts.append(f"{key}={value:g}")
+    return ";".join(parts) + ";"
+
+
+def _facing_side(s, box):
+    """The target side whose outward normal points toward exit point ``s``.
+
+    Prefer the side on the axis where ``s`` lies in front of the box (left of
+    the left face, above the top face, ...); fall back to the dominant axis of
+    the displacement from the box centre for diagonal approaches."""
+    x, y, w, h = box
+    left, right, top, bot = x, x + w, y, y + h
+    if s[0] < left and top - 1 <= s[1] <= bot + 1:
+        return "W"
+    if s[0] > right and top - 1 <= s[1] <= bot + 1:
+        return "E"
+    if s[1] < top and left - 1 <= s[0] <= right + 1:
+        return "N"
+    if s[1] > bot and left - 1 <= s[0] <= right + 1:
+        return "S"
+    dx = s[0] - (x + w / 2.0)
+    dy = s[1] - (y + h / 2.0)
+    if abs(dx) >= abs(dy):
+        return "W" if dx < 0 else "E"
+    return "N" if dy < 0 else "S"
+
+
+def _side_port(style, side):
+    """(px, py) pins for an entry port on ``side``, preserving the current
+    cross-axis fraction so the arrow keeps its vertical/horizontal slot."""
+    if side == "W":
+        return 0.0, (validate.style_num(style, "entryY") or 0.5)
+    if side == "E":
+        return 1.0, (validate.style_num(style, "entryY") or 0.5)
+    if side == "N":
+        return (validate.style_num(style, "entryX") or 0.5), 0.0
+    return (validate.style_num(style, "entryX") or 0.5), 1.0
 
 
 def _move_point(point, side, box):
@@ -107,6 +167,22 @@ def apply_pass(cells, ids, recipe):
         else:
             blocked.append(v["detail"])
 
+    # --- port pinned on a scrambled cube (generic) --------------------------
+    # cubePerimeter re-projects ports when direction=south; reverting to the
+    # north default makes the pins land where the guide's rule says they do.
+    fixed_cubes = set()
+    for v in validate.cube_port_violations(cells, ids):
+        cube = ids.get(v["vertex"])
+        if cube is None or v["vertex"] in fixed_cubes:
+            continue
+        style = cube.get("style") or ""
+        newstyle = _style_drop(style, "direction")
+        cube.set("style", newstyle)
+        fixed_cubes.add(v["vertex"])
+        applied.append(
+            f"cube {v['vertex']!r} dropped 'direction=south' (reverted to "
+            f"north) so cubePerimeter stops re-projecting pinned ports")
+
     # --- through-the-node edge ends ----------------------------------------
     for v in validate.through_target_violations(cells, ids):
         edge = ids.get(v["edge"])
@@ -156,6 +232,81 @@ def apply_pass(cells, ids, recipe):
         edge.set("style", set_port(style, "source", px, py))
         applied.append(f"op circle {v['circle']!r} out-edge {v['edge']!r} "
                        f"exit port -> {expected}")
+
+    # --- wrap-around edge (generic): entry faces the source ------------------
+    # Entry on a side whose normal points away from the source makes draw.io
+    # orbit the whole target (打环). Repoint the entry to the face the source
+    # actually stands in front of, keeping the cross-axis slot.
+    for v in validate.port_facing_violations(cells, ids):
+        edge = ids.get(v["edge"])
+        tbox = validate.abs_rect(ids.get(v["target"]), ids) if v["target"] in ids else None
+        if edge is None or tbox is None:
+            continue
+        style = edge.get("style") or ""
+        side = _facing_side(v["s"], tbox)
+        if side == v["in_side"]:
+            continue  # geometry shifted; nothing to do this pass
+        px, py = _side_port(style, side)
+        edge.set("style", set_port(style, "target", px, py))
+        applied.append(f"edge {v['edge']!r} entry {v['in_side']} -> {side} "
+                       f"(was wrapping around {v['target']!r} because the "
+                       f"entry face pointed away from the source)")
+
+    # --- misaligned straight pair (generic): slot ports to shared axis -------
+    for v in validate.port_alignment_violations(cells, ids):
+        edge = ids.get(v["edge"])
+        if edge is None:
+            continue
+        style = edge.get("style") or ""
+        if v["axis"] == "H":
+            ex = validate.style_num(style, "exitX")
+            nx = validate.style_num(style, "entryX")
+            if ex is None or nx is None:
+                continue
+            _, _, _, sh = v["src_rect"]
+            _, _, _, th = v["tgt_rect"]
+            ey = (v["shared"] - v["src_rect"][1]) / sh
+            ny = (v["shared"] - v["tgt_rect"][1]) / th
+            style = set_port(style, "source", ex, ey)
+            style = set_port(style, "target", nx, ny)
+            edge.set("style", style)
+            applied.append(
+                f"edge {v['edge']!r} ports aligned to shared y="
+                f"{v['shared']:g} (straight connector between {v['source']!r} "
+                f"and {v['target']!r})")
+        else:
+            ex = validate.style_num(style, "exitX")
+            nx = validate.style_num(style, "entryX")
+            if ex is None or nx is None:
+                continue
+            _, sw, _, _ = v["src_rect"]
+            _, tw, _, _ = v["tgt_rect"]
+            ey = validate.style_num(style, "exitY")
+            ny = validate.style_num(style, "entryY")
+            if ey is None or ny is None:
+                continue
+            ex = (v["shared"] - v["src_rect"][0]) / sw
+            nx = (v["shared"] - v["tgt_rect"][0]) / tw
+            style = set_port(style, "source", ex, ey)
+            style = set_port(style, "target", nx, ny)
+            edge.set("style", style)
+            applied.append(
+                f"edge {v['edge']!r} ports aligned to shared x="
+                f"{v['shared']:g} (straight connector between {v['source']!r} "
+                f"and {v['target']!r})")
+
+    # --- formula not bold (generic): fontStyle bit 1 -------------------------
+    for v in validate.formula_bold_violations(cells):
+        cell = ids.get(v["id"])
+        if cell is None:
+            continue
+        style = cell.get("style") or ""
+        fs = int(validate.style_num(style, "fontStyle") or 0)
+        if fs & 1:
+            continue  # became bold earlier in this run
+        cell.set("style", _style_set_num(style, "fontStyle", fs | 1))
+        applied.append(f"formula cell {v['id']!r} fontStyle {fs} -> {fs | 1} "
+                       f"(bold)")
 
     return applied, blocked
 

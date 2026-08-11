@@ -140,10 +140,40 @@ paste-ready 片段后改 `x/y` 与 `id` 即可：
   看起来就是"没连上"。校验器对带拐点的边报 WARNING `waypoint … is
   collinear with target edge`；修法是把最后一个拐点挪到目标边之外、与入口点
   同轴（进上边时 `last.y < box.y - 1`、`last.x == 入口x`）。
+- **入口侧必须朝向源（打环铁律）**：正交路由的最后一段从入口点的**法线方向**
+  切进来，所以入口侧朝向源是最短路径的前提。判定：**进左侧**要求源出口点在
+  入口点**左侧**（`exit.x < entry.x`），**进上边**要求源在**上方**（`exit.y <
+  entry.y`），进右侧/进下边同理。对边组合（出右进左、出上进下…）只要流势
+  一致（左→右、上→下）天然满足；**相邻/垂直组合**（出下进左、出右进上…）
+  必须先看源是否站在入口侧"正前方"——源若在入口侧的**反面**（例如从 box 左
+  侧进入但源在入口右侧），draw.io 会绕目标整整一圈再接上（**打环**），或沿
+  入口边退化滑动，看起来像没连上。校验器报 `enters … on the … side but its
+  source exits to the … of the entry`。修法：① 把入口侧翻到**朝向源的那一侧**
+  （源在下方→进下边、源在上方→进上边…），保留另一轴槽位；② 或改出口侧
+  与入口侧互指。相邻两盒默认的干净接法是**出近侧/入近侧**（上盒出下、下盒
+  出上、左盒出右、右盒出左），不要为了对齐而把端口钉到背向对方的边上。
+- **对边直连必须共享槽位（多余弯曲铁律）**：出右进左（或出上进下等对边组合）
+  的两盒在直线轴上有交叠、且中间无障碍时，两端端口**必须钉在同一槽位**
+  （横向对连要求 `exitY == entryY`，竖向对连要求 `exitX == entryX`），否则
+  draw.io 渲染出无谓的 S 弯。槽位按 §3 公式 (i+1)/(k+1) 排；校验器报
+  `could be a straight … connector … but exitY ≠ entryY`。修法：把两端端口
+  对齐到重叠区间中点（横向取两盒 y 方向重叠中心，竖向取 x 方向重叠中心）。
+  对边组合但盒子在直线轴上**没有交叠**的（真需要弯）、或中间被别的图元挡住
+  的，保持弯线是合理的——校验器只对"本可一条直线"的情况报警。
+- **cube 端口方向（错位铁律）**：`shape=cube` 的端口由 `cubePerimeter` 计算，
+  **不是**普通包围盒规则。实测（draw.io 31）：`direction=south` 时
+  `exitX=1;exitY=0.5` 渲染在**底部正中**、`exitX=0.5;exitY=1` 渲染在**左侧
+  正中**——"右中"钉出去落在完全不同的位置，自动路由被打环、甚至穿过图元。
+  凡要钉端口的立方体一律用 `direction=north`（默认，去掉 direction 样式），
+  或用普通圆角矩形；不钉端口的边让它自动选边即可。校验器报 `pins its … on
+  cube … (shape=cube;direction=south)`。
 - **写完后用工具兜底**：`python3 scripts/validate.py <file>` 会报"同侧
-  端口堆叠"、detached 边、入口不垂直；未钉端口的堆叠用
-  `python3 scripts/edgeports.py <file>` 自动分散；已钉但撞槽的用
-  `python3 scripts/respread_ports.py <file>` 重铺。
+  端口堆叠"、detached 边、入口不垂直、**入口不朝源（打环）**、**对边端口
+  未对齐（多余 S 弯）**、**cube 端口错位**、**公式未加粗**；未钉端口的堆叠
+  用 `python3 scripts/edgeports.py <file>` 自动分散；已钉但撞槽的用
+  `python3 scripts/respread_ports.py <file>` 重铺。以上机械可修的缺陷用
+  `python3 scripts/fix_layout.py <file> --apply` 一键修复（翻转打环入口侧、
+  对齐对边槽位、还原 cube 方向、补公式 `fontStyle=1`）。
 - **箭头净空**：最后一个拐点到目标图元的直线段必须 ≥20px，否则箭头压弯角。
 - **绕行**：边穿过无关图元时，在 geometry 里加拐点：
   ```xml
@@ -375,16 +405,15 @@ drawio --version                                   # PATH 里（macOS Homebrew/L
 drawio -x -f png --width 2000 -o figure.png figure.drawio
 ```
 
-**最终导出（交付用，`-e` 嵌入 XML 保持可编辑，`-s 2` 高清）**：
+**最终导出（交付用，`-e` 嵌入 XML 保持可编辑，矢量）**：
 
 ```bash
-drawio -x -f png -e -s 2 -o figure.drawio.png figure.drawio
 drawio -x -f svg -e -o figure.svg figure.drawio     # 矢量，投稿推荐
 ```
 
 关键坑：
-- **`-e` 的 PNG 不要把给视觉模型读**——draw.io CLI 的 `-e` PNG 截断 IEND 块，
-  视觉 API 会 400。预览永远用无 `-e` 的版本。
+- **预览永远用无 `-e` 的版本**——`-e` 会把 XML 嵌进导出文件（PNG 还会截断
+  IEND 块致视觉 API 400），只用于最终 SVG 交付，预览一律不带。
 - 预览图必须 ≤ 2576×2576px（视觉模型上限）——用 `--width 2000`，**不要** `-s 2`，
   也不要用 `-w`（不存在，静默破坏参数解析）。
 - `--layout` 标志只在 CLI ≥ v30 存在且会重排节点——**不要用**，布局你自己算。
@@ -417,6 +446,10 @@ drawio -x -f svg -e -o figure.svg figure.drawio     # 矢量，投稿推荐
 | 箭头没接上/游离线 | 核对 source/target id 存在；游离线是编辑器拆的——补回 source+target（见 §3 铁律），validate.py 已报 `detached` |
 | 箭头沿盒子边横滑（看似没连上） | 最后一个拐点与目标边共线——把拐点挪到目标边之外、与入口点同轴（见 §3 入口垂直铁律） |
 | 箭头穿自己的节点钉在远侧端口（看似没接上） | validate 报 `runs through the node`——翻转 entry/exit 侧到实际来向、把相邻拐点拉出净空（`fix_layout.py` 自动修） |
+| 箭头绕目标打一个大环才接上（打环） | 入口侧没朝向源——validate 报 `enters … but its source exits to the … of the entry`，把入口翻到朝向源那一侧（源在下方→进下边，见 §3 打环铁律；`fix_layout.py` 自动修） |
+| 两盒明明能一条直线，却画成 S 弯 | 对边端口没对齐——validate 报 `could be a straight connector`，把 exitY/entryY（或 exitX/entryX）钉到重叠区间中点（见 §3 直连铁律；`fix_layout.py` 自动修） |
+| 箭头在 cube 上落点诡异、被打环 | cube `direction=south` 重投影端口——validate 报 `pins its … on cube`，去掉 direction 用 north 默认，或改圆角矩形（`fix_layout.py` 自动修） |
+| 公式/损失/下标不显眼 | 数学单元没加粗——validate 报 `formula cell … is not bold`，给 style 补 `fontStyle=1`（`fix_layout.py` 自动修） |
 | op 圆箭头方向与 `↑`/`↓` 语义相反 | validate 报 `reads backwards`——`↑` 出边必须朝上、`↓` 朝下（`fix_layout.py` 自动修） |
 | 对称 U 型 Bottleneck 不居中 / 两臂不镜像 / 跳跃线不水平 | validate `--recipe symmetric_u` 报 `off-centre` / `not level` / `not horizontal`——居中可自动修，其余按告警值手动对齐 |
 | 边穿过无关图元 | 加 `<Array as="points">` 拐点沿走廊绕行 |

@@ -53,6 +53,7 @@ import argparse
 import json
 import math
 import os
+import re
 import sys
 import xml.etree.ElementTree as ET
 
@@ -1557,6 +1558,312 @@ def straightness_warnings(cells, ids):
     return warns
 
 
+# --- Port / routing quality checks (the "four generation defects") ----------
+# The guide's edge discipline forbids four classes that a rendered PNG used to
+# be the only way to catch: arrows that wrap around their target (打环), arrows
+# forced into a bend when a clear straight connector exists (多余弯曲), port
+# pins that the cube perimeter silently re-projects, and formula text that is
+# not bold. All four are derived purely from geometry + style, so validate can
+# flag them without draw.io. Each is verified against draw.io's real router.
+
+PORT_TOL = 2.0          # px - exit point may graze the entry face within this
+CUBE_SCRAMBLED_DIRS = ("south",)  # directions whose cube perimeter re-projects ports
+
+
+def _pinned_side(style, prefix):
+    """Return 'N'/'S'/'E'/'W' if the port (exit/entry) is pinned to a boundary
+    on exactly one axis, else None. A corner pin (both axes on the boundary)
+    is ambiguous -> None, and a mid-face pin ((0.5, 0.5)) is not a side."""
+    px, py = style_num(style, prefix + "X"), style_num(style, prefix + "Y")
+    on_x = px in (0.0, 1.0)
+    on_y = py in (0.0, 1.0)
+    if on_x and not on_y:
+        return "W" if px == 0.0 else "E"
+    if on_y and not on_x:
+        return "N" if py == 0.0 else "S"
+    return None
+
+
+def cube_port_violations(cells, by_id):
+    """Structured port-pins-on-scrambled-cube findings (one dict per edge end).
+
+    draw.io computes a cube's exit/entry point with `cubePerimeter`, not the
+    bounding-box rule the guide teaches. Verified against draw.io 31: a cube
+    with `direction=south` renders exitX=1;exitY=0.5 at the BOTTOM centre and
+    exitX=0.5;exitY=1 at the LEFT centre - so the "right mid" pin lands
+    somewhere else entirely and the auto-router wraps the edge. `direction=north`
+    (the default) honours the pins, and unpinned edges auto-pick a sane side.
+    """
+    finds = []
+    for c in cells:
+        if c.get("edge") != "1":
+            continue
+        style = c.get("style") or ""
+        eid = c.get("id")
+        for end, prefix in (("source", "exit"), ("target", "entry")):
+            vid = c.get(end)
+            if not vid or vid not in by_id:
+                continue
+            vs = by_id[vid].get("style") or ""
+            if (style_value(vs, "shape") == "cube"
+                    and style_value(vs, "direction") in CUBE_SCRAMBLED_DIRS
+                    and _pinned_side(style, prefix) is not None):
+                finds.append({"edge": eid, "vertex": vid, "end": end})
+    return finds
+
+
+def cube_port_warnings(cells, by_id):
+    warns = []
+    for v in cube_port_violations(cells, by_id):
+        warns.append(
+            f"edge {v['edge']!r} pins its "
+            f"{'exit' if v['end'] == 'source' else 'entry'} on cube "
+            f"{v['vertex']!r} (shape=cube;direction=south) - the cube perimeter "
+            f"re-projects ports ((1,0.5) renders at the bottom, (0.5,1) at the "
+            f"left) so the route wraps; use direction=north (drop the direction "
+            f"style) or a plain rounded rectangle, or unpin the port")
+    return warns
+
+
+def port_facing_violations(cells, by_id):
+    """Structured wrap-around findings: exit not "in front of" the entry side.
+
+    Adjacent/opposite exit-entry combos whose exit is not "in front of" the
+    entry side - draw.io must wrap around the target to reach it, producing the
+    打环 loop or a degenerate slide along the entry edge. Verified against
+    draw.io's orthogonal router: entry LEFT needs the exit point left of the
+    entry, entry TOP needs it above, etc. Opposite-side combos pass
+    automatically (exit right + entry left with a left->right flow is the
+    canonical straight case). Only fully-pinned, waypoint-free edges are judged
+    - hand-routed edges are the author's own shape, and draw.io auto-picks a
+    sane side when a port is unpinned."""
+    finds = []
+    for c in cells:
+        if c.get("edge") != "1":
+            continue
+        style = c.get("style") or ""
+        if style_value(style, "edgeStyle") != "orthogonalEdgeStyle":
+            continue
+        if edge_waypoints(c):
+            continue
+        in_side = _pinned_side(style, "entry")
+        out_side = _pinned_side(style, "exit")
+        if in_side is None or out_side is None:
+            continue
+        if c.get("source") == c.get("target"):
+            continue  # intentional self-loop
+        s = endpoint(c, "source", by_id)
+        t = endpoint(c, "target", by_id)
+        if s is None or t is None:
+            continue
+        eid = c.get("id")
+        reason = None
+        if in_side == "W" and s[0] > t[0] + PORT_TOL:
+            reason = "its source exits to the right of the entry - draw.io " \
+                     "wraps around the target (arrow loop)"
+        elif in_side == "E" and s[0] < t[0] - PORT_TOL:
+            reason = "its source exits to the left of the entry - draw.io " \
+                     "wraps around the target (arrow loop)"
+        elif in_side == "N" and s[1] > t[1] + PORT_TOL:
+            reason = "its source exits below the entry - draw.io wraps around " \
+                     "the target (arrow loop)"
+        elif in_side == "S" and s[1] < t[1] - PORT_TOL:
+            reason = "its source exits above the entry - draw.io wraps around " \
+                     "the target (arrow loop)"
+        if reason:
+            finds.append({
+                "edge": eid, "target": c.get("target"), "in_side": in_side,
+                "s": s, "t": t, "reason": reason})
+    return finds
+
+
+def port_facing_warnings(cells, by_id):
+    warns = []
+    for v in port_facing_violations(cells, by_id):
+        face = {"W": "left", "E": "right", "N": "top", "S": "bottom"}[v["in_side"]]
+        warns.append(
+            f"edge {v['edge']!r} enters {v['target']!r} on the {face} side "
+            f"but {v['reason']}; flip the entry side to face the source (or "
+            f"pick exit/entry sides that point at each other)")
+    return warns
+
+
+def port_alignment_violations(cells, by_id):
+    """Structured S-bend findings: opposite-side ports misaligned when a
+    straight connector between the two boxes is geometrically possible and
+    unobstructed. The router renders an S-bend; aligning the ports makes it a
+    single straight line. Pairs whose boxes do not overlap on the straight axis
+    genuinely need the bend. Each finding carries the shared coordinate (ymid /
+    xmid) and the two box rects so a fixer can re-slot the ports."""
+    finds = []
+    allv, text_rects, title_rects = [], [], []
+    for c in cells:
+        if c.get("vertex") != "1" or is_edge_label(c):
+            continue
+        box = abs_rect(c, by_id)
+        if box is None:
+            continue
+        if is_text_cell(c):
+            text_rects.append(box)
+        else:
+            allv.append((c.get("id"), box))
+            tr = title_rect(c, by_id)
+            if tr:
+                title_rects.append(tr)
+    label_rects = {c.get("id"): edge_label_rect(c, by_id)
+                   for c in cells
+                   if c.get("edge") == "1" and edge_label_rect(c, by_id)}
+
+    def clear_segment(p1, p2, skip):
+        for vid, box in allv:
+            if vid in skip:
+                continue
+            if route_hits_rect([p1, p2], box):
+                return False
+        for box in text_rects + title_rects:
+            if route_hits_rect([p1, p2], box):
+                return False
+        for bid, box in label_rects.items():
+            if route_hits_rect([p1, p2], box):
+                return False
+        return True
+
+    for c in cells:
+        if c.get("edge") != "1":
+            continue
+        style = c.get("style") or ""
+        if style_value(style, "edgeStyle") != "orthogonalEdgeStyle":
+            continue
+        if edge_waypoints(c):
+            continue
+        in_side = _pinned_side(style, "entry")
+        out_side = _pinned_side(style, "exit")
+        if (in_side, out_side) not in (("W", "E"), ("E", "W"),
+                                       ("N", "S"), ("S", "N")):
+            continue  # only opposite-side pairs can be a single straight line
+        s = endpoint(c, "source", by_id)
+        t = endpoint(c, "target", by_id)
+        if s is None or t is None:
+            continue
+        src_box, tgt_box = by_id.get(c.get("source")), by_id.get(c.get("target"))
+        if src_box is None or tgt_box is None:
+            continue
+        eid = c.get("id")
+        skip = {c.get("source"), c.get("target")}
+        if in_side in ("W", "E"):                       # horizontal pair
+            if abs(s[1] - t[1]) <= ALIGN_EPS:
+                continue                                # already straight
+            sr = abs_rect(src_box, by_id)
+            tr = abs_rect(tgt_box, by_id)
+            if sr is None or tr is None:
+                continue
+            lo = max(sr[1], tr[1])
+            hi = min(sr[1] + sr[3], tr[1] + tr[3])
+            if lo > hi:
+                continue                                # no shared height
+            ymid = (lo + hi) / 2.0
+            if not clear_segment((s[0], ymid), (t[0], ymid), skip):
+                continue                                # something blocks it
+            finds.append({"edge": eid, "source": c.get("source"),
+                          "target": c.get("target"), "axis": "H",
+                          "shared": ymid, "src_rect": sr, "tgt_rect": tr,
+                          "src": s, "tgt": t})
+        else:                                           # vertical pair
+            if abs(s[0] - t[0]) <= ALIGN_EPS:
+                continue
+            sr = abs_rect(src_box, by_id)
+            tr = abs_rect(tgt_box, by_id)
+            if sr is None or tr is None:
+                continue
+            lo = max(sr[0], tr[0])
+            hi = min(sr[0] + sr[2], tr[0] + tr[2])
+            if lo > hi:
+                continue
+            xmid = (lo + hi) / 2.0
+            if not clear_segment((xmid, s[1]), (xmid, t[1]), skip):
+                continue
+            finds.append({"edge": eid, "source": c.get("source"),
+                          "target": c.get("target"), "axis": "V",
+                          "shared": xmid, "src_rect": sr, "tgt_rect": tr,
+                          "src": s, "tgt": t})
+    return finds
+
+
+def port_alignment_warnings(cells, by_id):
+    warns = []
+    for v in port_alignment_violations(cells, by_id):
+        if v["axis"] == "H":
+            warns.append(
+                f"edge {v['edge']!r} could be a straight horizontal connector "
+                f"between {v['source']!r} and {v['target']!r} (their boxes "
+                f"overlap vertically and nothing blocks a straight line) but "
+                f"exitY={v['src'][1]:g} != entryY={v['tgt'][1]:g} forces an "
+                f"S-bend; align the two ports to a shared height")
+        else:
+            warns.append(
+                f"edge {v['edge']!r} could be a straight vertical connector "
+                f"between {v['source']!r} and {v['target']!r} (their boxes "
+                f"overlap horizontally and nothing blocks a straight line) but "
+                f"exitX={v['src'][0]:g} != entryX={v['tgt'][0]:g} forces an "
+                f"S-bend; align the two ports to a shared height")
+    return warns
+
+
+# Formula cells must be bold (fontStyle=1) - the guide's math/annotation rule.
+# Signals are deliberately conservative so module titles and captions that only
+# happen to contain '·' or '−' are not flagged: a cell counts as a formula when
+# it carries a sub/superscript, a Greek letter, a dedicated math operator
+# (√ ℒ ‖ ∑ ∫ ⊗ ⊕ − × ² ³ ≈ ∈ ≠ ← → ↑ ↓ ↔ ± ∪ ∩ ′ ~), or an underscore that is
+# embedded in math context (a bare 'x_0' is a label; '|B_mis| < K_mis' is a
+# formula). Code/file names like 'fix_layout.py' or 'M_opt' are NOT formulas -
+# an underscore alone never fires. Only shape / note boxes are judged -
+# standalone text cells (panel titles, captions, annotations) are labels.
+_FORMULA_SUB = re.compile(r"[⁰-₟₀-₟]")
+_FORMULA_GREEK = re.compile(r"[Ͱ-Ͽἀ-῿]")
+_FORMULA_OPS = re.compile(
+    r"[√ℒ‖∑∫⊗⊕−×²³"
+    r"≈∈≠←↑→↓↔±∪∩′]|~")
+_FORMULA_UNDER = re.compile(r"_")
+_FORMULA_UNDER_CTX = re.compile(r"[≤≥<>=|{}]")
+
+
+def _is_formula_value(value):
+    if not value:
+        return False
+    v = value.replace("<br>", " ").replace("&amp;", "&")
+    if _FORMULA_SUB.search(v) or _FORMULA_GREEK.search(v) or _FORMULA_OPS.search(v):
+        return True
+    # Underscore alone (file names, module ids) is not a formula; it counts only
+    # when surrounded by comparison/brace/set punctuation that marks an equation.
+    return bool(_FORMULA_UNDER.search(v) and _FORMULA_UNDER_CTX.search(v))
+
+
+def formula_bold_violations(cells):
+    """Shape/note boxes carrying math that are not bold (missing fontStyle=1)."""
+    finds = []
+    for c in cells:
+        if c.get("vertex") != "1" or is_edge_label(c) or is_text_cell(c):
+            continue
+        value = c.get("value") or ""
+        if not _is_formula_value(value):
+            continue
+        style = c.get("style") or ""
+        bold = style_num(style, "fontStyle") is not None and \
+            int(style_num(style, "fontStyle")) & 1
+        if not bold:
+            finds.append({"id": c.get("id"), "value": value})
+    return finds
+
+
+def formula_bold_warnings(cells):
+    warns = []
+    for v in formula_bold_violations(cells):
+        warns.append(
+            f"formula cell {v['id']!r} ({v['value'][:24]!r}) is not bold - "
+            f"formulas must carry fontStyle=1; add it to the style")
+    return warns
+
+
 def spacing_warnings(cells, ids):
     """Two "space utilisation" rules.
 
@@ -1804,6 +2111,10 @@ def check_page(diagram, recipe=None):
     warns += container_warnings(cells)
     warns += geometry_warnings(cells, ids, parents)
     warns += straightness_warnings(cells, ids)
+    warns += cube_port_warnings(cells, ids)
+    warns += port_facing_warnings(cells, ids)
+    warns += port_alignment_warnings(cells, ids)
+    warns += formula_bold_warnings(cells)
     warns += spacing_warnings(cells, ids)
     warns += port_stacking_warnings(cells, ids)
     warns += collinear_entry_warnings(cells, ids)
@@ -1834,6 +2145,13 @@ def check_page(diagram, recipe=None):
 
 
 def main():
+    # Diagrams carry Greek/math unicode in cell values; on Windows the console
+    # default codepage (gbk) cannot encode them and print() would crash the
+    # whole lint. Reconfigure stdout to UTF-8 so warnings stay readable.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
     ap = argparse.ArgumentParser(
         description="Lint a hand-written .drawio file for structural errors.")
     ap.add_argument("file")

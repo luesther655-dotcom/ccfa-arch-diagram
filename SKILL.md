@@ -13,7 +13,7 @@ draw.io 架构图。**布局与走线由你手算、XML 由你手写**（语法�
 
 1. `<name>.drawio` — 可在 draw.io 打开、继续编辑的图表文件（主交付物）
 2. `<name>.png` — draw.io CLI 导出的预览图（CLI 可用时）
-3. `<name>.drawio.png` / `<name>.svg` — 最终交付导出（`-e` 嵌入，可再编辑）
+3. `<name>.svg` — 最终交付导出（`-e` 嵌入，可再编辑，矢量）
 
 ## 工作流（必须按此顺序）
 
@@ -125,17 +125,28 @@ python3 scripts/validate.py <name>.drawio --recipe symmetric_u --strict   # 对�
   ⑤ 走线平直：共线拐点（删掉不改路由）与"本可走直却拐弯"（直连无框/无字
   阻挡）都报 warning；⑥ 间距均匀：lane/column 内中位间隙的倍数异常（图例
   列、U 型走廊、侧边栏等合法结构已豁免）与"框填充率过低=大片留白"都报
-  warning。
+  warning；⑦ 打环：入口侧不朝向源（入口朝左则源必须在左、朝上则源必须在
+  上……否则 draw.io 会绕到目标另一侧打圈）报 warning，`fix_layout.py` 会把
+  entry 翻到朝向源的一侧；⑧ 对边直连端口未对齐：两框在直连轴上重叠、中间
+  无遮挡、本可单线直连，却因 exit/entry 端口高度/横位不一致拐出 S 弯，报
+  warning，`fix_layout.py` 自动把两端槽位对齐；⑨ cube 端口错位：
+  `shape=cube;direction=south` 会重投影端口（`(1,0.5)` 渲染到底边、
+  `(0.5,1)` 渲染到左边），钉了 exit/entry 也错位、路由必然绕圈，报
+  warning，`fix_layout.py` 自动去掉 `direction`；⑩ 公式未加粗：单元格内容
+  命中公式信号（上下标/希腊字母/数学符号，或下划线带数学语境）却没有
+  `fontStyle=1`，报 warning，`fix_layout.py` 自动置粗。
   对应原型图的配方在 `scripts/recipes/<name>.json`（`symmetric_u` 已内置），
   新图画完把 ids 抄进配方即可启用 ④。
 - 报"同侧未钉端口堆叠"→ 跑 `python3 scripts/edgeports.py <name>.drawio`
   自动按对端位置分散（跳过你手钉的端口，幂等）；
   报"已钉端口撞槽"→ 跑 `python3 scripts/respread_ports.py <name>.drawio`
   按槽位公式 (i+1)/(k+1) 重铺（字节精确，不动其他内容）。
-- **检测→修复→复检闭环**：validate 报居中偏移/箭头穿节点/op 方向 → 跑
+- **检测→修复→复检闭环**：validate 报居中偏移/箭头穿节点/op 方向/打环/
+  对边 S 弯/cube 错位/公式未加粗 → 跑
   `python3 scripts/fix_layout.py <name>.drawio --recipe symmetric_u --apply`
-  自动重算 x、翻转 entry/exit 侧、拉净空（默认 dry-run 预览，`--apply` 才
-  落盘，幂等），再跑 validate 确认归零。
+  自动重算 x、翻转 entry/exit 侧、对齐对边槽位、去掉 cube 的 `direction`、
+  置粗公式、拉净空（默认 dry-run 预览，`--apply` 才落盘，幂等），再跑
+  validate 确认归零。
 - 修完再跑一遍 validate 确认归零。**没有 Python 时**跳过本步，靠 Step 4
   视觉自检兜底（但自检轮次预算不变）。
 
@@ -180,7 +191,6 @@ Step 3-4，直接交付 `.drawio`，告知用户用 draw.io 桌面端/网页版�
 用户认可后：
 
 ```bash
-drawio -x -f png -e -s 2 -o <name>.drawio.png <name>.drawio   # 高清可再编辑
 drawio -x -f svg -e -o <name>.svg <name>.drawio               # 矢量，投稿推荐
 ```
 
@@ -225,13 +235,25 @@ drawio -x -f svg -e -o <name>.svg <name>.drawio               # 矢量，投稿�
    位置排序分配**（这是出线不交叉的关键）；反方向汇入 op 圆的合流叉允许
    共享端口，同方向并行绝不允许。长边（残差/反馈/跨面板）沿外环走廊走，
    不穿图元密集区；枢纽节点放分支中间。
-7. **写完先跑 `scripts/validate.py`**：error 清零才导出；语义不变量用
+7. **打环铁律（入口侧必须朝向源）**：pin 了 entry 时，入口朝左 → 源必须
+   整体在入口左侧；入口朝上 → 源必须在上；否则 draw.io 会绕到目标另一侧
+   打圈（`orthogonalLoop=1` 也拦不住）。对边直连（出右进左）天然满足；
+   邻边组合或"入口朝源却隔得近"务必检查。**对边直连共享槽位**：出右进左
+   两框在直连轴上重叠、中间无遮挡时，两端端口高度必须一致（H 向）或横位
+   一致（V 向），否则白拐 S 弯。**cube 一律 `direction=north`**：需要立
+   box 时用 `direction=south`，但**只要它上面钉了 exit/entry 端口，就不能
+   带 `direction`**——cube 外框会重投影端口导致路由绕圈，钉了等于没钉。
+   **公式一律加粗**：数学变量/表达式所在 cell 必须 `fontStyle=1`（公式
+   信号见 xml-guide §3.4）。这四条 validate 都能确定性报出，`fix_layout.py
+   --apply` 直接修。
+8. **写完先跑 `scripts/validate.py`**：error 清零才导出；语义不变量用
    `--recipe`（对称 U 型 → `symmetric_u`），报居中/穿节点/op 方向 →
    `fix_layout.py --apply` 自动修复复检；端口问题用 `edgeports.py` /
-   `respread_ports.py` 兜底。**走线平直/间距均匀也是确定性 warning**（见
-   Step 2 ⑤⑥）：报"共线拐点"就删掉那个 `<mxPoint>`，"可走直却拐弯"就换
-   端口侧或删拐点，报"uneven spacing"就挪框补间隙——这些都是实打实的观感
-   缺陷，不是噪音。**draw.io CLI 导出 = 唯一预览真相**；自检 ≤2 轮，
+   `respread_ports.py` 兜底。**走线平直/间距均匀/打环/S 弯/cube 错位/
+   公式未加粗也是确定性 warning**（见 Step 2 ⑤–⑩）：报"共线拐点"就删掉
+   那个 `<mxPoint>`，"可走直却拐弯"就换端口侧或删拐点，报打环就翻 entry
+   侧，报"uneven spacing"就挪框补间隙——这些都是实打实的观感缺陷，不是
+   噪音。**draw.io CLI 导出 = 唯一预览真相**；自检 ≤2 轮，
    用户反馈 ≤5 轮。无 CLI 时 validate+recipe 0/0 即交付。
 8. **顶会装裱**：Times New Roman + 半透明容器 + 底部虚线图例栏（多面板系统图
    用右侧图例列）；论文投稿底部图题（"Fig. N. ..."）。
