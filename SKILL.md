@@ -8,8 +8,9 @@ description: 生成 CCF-A 顶会论文级模型架构图（NeurIPS/ICML/ICLR/CVP
 把用户对模型的口头描述 / 代码文件，变成一张**能直接投进 CCF-A 论文**的
 draw.io 架构图。**布局与走线由你手算、XML 由你手写**（语法与全部
 样式串见 `references/drawio-xml-guide.md`，动手前必读），draw.io 是唯一
-渲染真相；写完用 `scripts/` 下三个纯标准库小工具做确定性校验与端口修复
-（validate / edgeports / respread_ports，见 Step 2 末尾）。产出：
+渲染真相；写完用 `scripts/` 下四个纯标准库小工具做确定性校验、端口修复与
+渲染复核（validate / edgeports / respread_ports / svgcheck，见 Step 2 末尾
+与 Step 3）。产出：
 
 1. `<name>.drawio` — 可在 draw.io 打开、继续编辑的图表文件（主交付物）
 2. `<name>.png` — draw.io CLI 导出的预览图（CLI 可用时）
@@ -118,8 +119,9 @@ U-Net/编码器-解码器 → 对称 U 型（三段水平居中，Bottleneck 置
 **写完必做结构校验（draw.io 都不需要启动）**：
 
 ```bash
-python3 scripts/validate.py <name>.drawio                 # 几何/结构：重叠/骑跨/标题带/端口堆叠/超宽/悬空边/箭头穿字/走线平直/间距均匀
+python3 scripts/validate.py <name>.drawio                 # 几何/结构：重叠/骑跨/标题带/端口堆叠/超宽/悬空边/箭头穿字/走线平直/间距均匀/单边自交
 python3 scripts/validate.py <name>.drawio --recipe symmetric_u --strict   # 对称 U 型图再加语义不变量，0/0 才算过
+python3 scripts/validate.py <name>.drawio --acyclic       # opt-in：纯前馈流水线加有向流图成环检查（多智能体/反馈/迭代图合法成环，勿加）
 ```
 
 - **error 必须清零**才进 Step 3；warning 逐条修（它们几乎都是真实的
@@ -140,7 +142,10 @@ python3 scripts/validate.py <name>.drawio --recipe symmetric_u --strict   # 对�
   `(0.5,1)` 渲染到左边），钉了 exit/entry 也错位、路由必然绕圈，报
   warning，`fix_layout.py` 自动去掉 `direction`；⑩ 公式未加粗：单元格内容
   命中公式信号（上下标/希腊字母/数学符号，或下划线带数学语境）却没有
-  `fontStyle=1`，报 warning，`fix_layout.py` 自动置粗。
+  `fontStyle=1`，报 warning，`fix_layout.py` 自动置粗；⑪ 单边折线自交成环
+  （箭头绕回穿过自己的线，waypoint 乱序）；⑫ 有向流图成环（a→b→c→a 的箭头
+  闭环）——默认**不查**，纯前馈流水线加 `--acyclic` 才启用：多智能体协作、
+  RL/进化环、反馈边都是合法成环设计，只有纯前馈流水线才该无环。
   对应原型图的配方在 `scripts/recipes/<name>.json`（`symmetric_u` 已内置），
   新图画完把 ids 抄进配方即可启用 ④。
 - 报"同侧未钉端口堆叠"→ 跑 `python3 scripts/edgeports.py <name>.drawio`
@@ -154,21 +159,36 @@ python3 scripts/validate.py <name>.drawio --recipe symmetric_u --strict   # 对�
   置粗公式、拉净空（默认 dry-run 预览，`--apply` 才落盘，幂等），再跑
   validate 确认归零。
 - 修完再跑一遍 validate 确认归零。**没有 Python 时**跳过本步，靠 Step 4
-  视觉自检兜底（但自检轮次预算不变）。
+  视觉自检兜底（但自检轮次预算不变）。**所用模型是语言模型（无视觉）时**，
+  直接用 `--strict`（带 recipe）跑 validate，**0/0 即收口交付**，跳过 Step 4
+  目检（见 Step 4 能力预判）。
 
-### Step 3 — 导出预览（draw.io 桌面 CLI）
+### Step 3 — 导出预览 + 渲染复核（draw.io 桌面 CLI）
 先探测 CLI（按序，任一成功即可，后续沿用该写法）：
 `drawio --version` →
 `"C:\Program Files\draw.io\draw.io.exe" --version` →
-`"%LOCALAPPDATA%\Programs\draw.io\draw.io.exe" --version` →
+`"%LOCALAPPDATA%\Programs\draw.io\draw.io.exe" --version`（Windows 本机安装
+  通常落在这里，例如 `C:\Users\LENOVO\AppData\Local\Programs\draw.io\draw.io.exe`）→
 macOS `.app` 全路径。然后：
 
 ```bash
-drawio -x -f png --width 2000 -o <name>.png <name>.drawio
+drawio -x -f png --width 2000 -o <name>.png <name>.drawio     # 预览（视觉目检用）
+drawio -x -f svg -o <name>.svg <name>.drawio                  # 渲染真相（svgcheck 复核用）
+python3 scripts/svgcheck.py <name>.drawio <name>.svg          # 真实路径几何复核，FINDING 必须清零
+python3 scripts/svgcheck.py <name>.drawio <name>.svg --acyclic   # 纯前馈流水线再加有向成环检查
 ```
 
-**预览绝不加 `-e`**（嵌入块会让视觉模型 400 拒读），**用 `--width 2000`
-不用 `-s 2`**（防超 2576px 视觉上限）。
+**预览 PNG 绝不加 `-e`**（嵌入块会让视觉模型 400 拒读），**用 `--width 2000`
+不用 `-s 2`**（防超 2576px 视觉上限）。**复核用 SVG 走普通 `-f svg` 导出**
+——draw.io 桌面导出自带 `data-cell-id`（不需要 `-e`），svgcheck 靠它把渲染
+路径映射回 cell；缺它 svgcheck 会明确报错，不会静默漏检。
+
+**svgcheck = 不目检也能拿到的"渲染真相"**：validate.py 对自动布线/对角线
+路径是近似推算（曼哈顿 Z 形、对角线直接跳过），svgcheck 读的是 draw.io
+**实际画出来的路径**，精确复检边穿 box / 穿文字 / 边边交叉 / 单边自交
+（`--acyclic` 加成环）。**FINDING 必须清零**才算过，`--strict` 时 INFO 也清零
+——这是比目检更硬的确定性关卡，纯语言模型（跳过目检）也照样执行。报 FINDING
+→ 就地改 XML → 重新导出 → 重跑 svgcheck 归零。
 
 **CLI 未找到 → 先问再装**：向用户说明"未检测到 draw.io CLI，是否现在自动安装？"
 ——安装是系统级改动，**必须等用户明确同意才执行**，绝不擅自安装。用户同意后按平台安装，装完**重新探测**再走本步：
@@ -181,17 +201,28 @@ Step 3-4，直接交付 `.drawio`，告知用户用 draw.io 桌面端/网页版�
 **不要**用 Python 库自造预览（本 skill 不含任何渲染代码，近似预览
 只会误导）。
 
-### Step 4 — 目检与迭代
+### Step 4 — 能力预判 + 目检与迭代
+**能力预判（先做）**：判断当前模型能否读图——查 `ANTHROPIC_MODEL` /
+`CLAUDE_MODEL` 环境变量看模型 id，或不确定时用一张最小 PNG 试读一次
+（`Read` 报错/返回空即视为无视觉）。**如果所用模型是语言模型（纯文本、
+无视觉），直接跳过目检环节**：渲染真相已由 Step 3 的 svgcheck（真实路径
+几何复核）接管，结构/语义由 Step 2 validate+recipe 兜底，**两关都清零即
+交付**；PNG 照常导出交给用户目检（人是能看的）。以下读图自检流程仅对
+能读图的视觉模型执行。
+
 **读回 `<name>.png`**，对照 `references/drawio-xml-guide.md` 第 9 节
 自检清单检查：重叠、文字溢出、容器标题被压、箭头没接上、边穿图元、
 同侧端口叠成一股、线条因图过宽而隐形、密度达标。
 （Step 2 的 validate.py + recipe 已把结构类**和**语义类（居中/镜像/跳跃
-水平/箭头穿节点/op 方向/文字溢出）清零——目检只兜底规则未覆盖的观感
-边角，**不再承担发现已知缺陷类型的角色**。）
+水平/箭头穿节点/op 方向/文字溢出）清零，Step 3 的 svgcheck 已把真实渲染
+路径类（穿 box/穿字/交叉/自交）清零——目检只兜底规则未覆盖的观感
+边角，**不再承担发现已知缺陷类型的角色**；无视觉模型连这部分也由
+validate + svgcheck 的确定性检查顶替，不降质量标准。）
 就地改 XML（单点问题）或重写（整体方向问题），重新导出，**最多 2 轮**
 自检后交付用户过目；用户反馈循环最多 5 轮后建议其在 draw.io 里手动微调。
-预览 PNG 每轮覆盖同名文件。**无 CLI 环境**下，validate 带 recipe 0/0
-即可交付 `.drawio`（语义不变量不依赖渲染）。
+预览 PNG 每轮覆盖同名文件。**无 CLI 环境**下，validate 带 recipe 0/0 即可
+交付 `.drawio`（语义不变量不依赖渲染）；**无视觉模型**下 validate + svgcheck
+双 0/0 即交付（svgcheck 顶替目检的渲染真相）。
 
 ### Step 5 — 最终导出与交付
 用户认可后：
@@ -259,11 +290,14 @@ drawio -x -f svg -e -o <name>.svg <name>.drawio               # 矢量，投稿�
    `--recipe`（对称 U 型 → `symmetric_u`），报居中/穿节点/op 方向 →
    `fix_layout.py --apply` 自动修复复检；端口问题用 `edgeports.py` /
    `respread_ports.py` 兜底。**走线平直/间距均匀/打环/S 弯/cube 错位/
-   公式未加粗也是确定性 warning**（见 Step 2 ⑤–⑩）：报"共线拐点"就删掉
-   那个 `<mxPoint>`，"可走直却拐弯"就换端口侧或删拐点，报打环就翻 entry
-   侧，报"uneven spacing"就挪框补间隙——这些都是实打实的观感缺陷，不是
-   噪音。**draw.io CLI 导出 = 唯一预览真相**；自检 ≤2 轮，
-   用户反馈 ≤5 轮。无 CLI 时 validate+recipe 0/0 即交付。
+   公式未加粗/单边自交也是确定性 warning**（见 Step 2 ⑤–⑪）：报"共线拐点"
+   就删掉那个 `<mxPoint>`，"可走直却拐弯"就换端口侧或删拐点，报打环就翻
+   entry 侧，报"uneven spacing"就挪框补间隙——这些都是实打实的观感缺陷，
+   不是噪音。**draw.io CLI 导出 = 唯一预览真相**；自检 ≤2 轮，
+   用户反馈 ≤5 轮。**导出 SVG 后跑 `scripts/svgcheck.py` 渲染复核**
+   （真实路径穿 box/穿字/交叉/自交，`--acyclic` 加成环），FINDING 清零。
+   无 CLI 时 validate+recipe 0/0 即交付；无视觉模型（语言模型）时
+   validate + svgcheck 双 0/0 即交付（svgcheck 顶替目检的渲染真相）。
 8. **顶会装裱**：Times New Roman + 半透明容器 + 底部虚线图例栏（多面板系统图
    用右侧图例列）；论文投稿底部图题（"Fig. N. ..."）。
 9. **先选原型再动手**：单一网络→水平长条；训练流程→(a)(b)(c) 面板；
@@ -291,5 +325,9 @@ drawio -x -f svg -e -o <name>.svg <name>.drawio               # 矢量，投稿�
   （Windows `winget install --id JGraph.Drawio`、macOS `brew install --cask drawio`、
   Linux `snap install drawio-desktop`）。
 - **Python 3**（可选，仅标准库）：跑 `scripts/` 下的 validate / edgeports /
-  respread_ports 结构校验与端口修复。**生成仍然全手写**——这三个是
-  校验/修复工具，不是生成脚本；没有 Python 就靠视觉自检兜底。
+  respread_ports 结构校验与端口修复，以及 svgcheck 渲染复核（读真实 SVG
+  路径查边穿 box/文字/交叉/自交）。**生成仍然全手写**——这些是
+  校验/修复工具，不是生成脚本；没有 Python 就靠视觉自检兜底
+  （无视觉且无 Python 的极端情况：交付 `.drawio` 请用户复核）。
+- **draw.io 导出的 SVG**（svgcheck 复核输入）：CLI 或桌面 `-f svg` 导出即可，
+  自带 `data-cell-id`（无需 `-e`）；svgcheck 缺它会明确报错。

@@ -11,6 +11,7 @@ other. Runs without launching draw.io - a fast pre-check before export.
   python3 validate.py diagram.drawio
   python3 validate.py diagram.drawio --strict --score
   python3 validate.py unet.drawio --recipe symmetric_u   # + archetype invariants
+  python3 validate.py ddpm.drawio --acyclic              # + flow-cycle check (opt-in)
 
 Layout model assumed (this skill writes FLAT files): every cell has
 parent="1"; a "container" is an ordinary vertex rect that fully contains other
@@ -34,7 +35,14 @@ Checks added for this skill's observed failure modes:
     redundant waypoint; aligned endpoints with an unblocked straight connector
     yet routed with waypoints);
   - uneven or excessive spacing between boxes in a lane/column (a stray hole, a
-    cramped pair, or a lane spread into islands of whitespace).
+    cramped pair, or a lane spread into islands of whitespace);
+  - a waypointed arrow whose own route folds back and crosses itself (a
+    self-intersecting loop knot - the "arrow loops back on itself" look);
+  - the directed flow graph (arrows as source->target edges) containing a
+    cycle - an accidental backward connection closing a loop. Opt-in via
+    --acyclic: multi-agent collaboration, RL/evolution loops and feedback
+    edges legitimately cycle, so this invariant is only true for feedforward
+    pipelines.
 
 Edge routing checks (warnings) use explicit waypoints (<Array as="points">)
 when present; waypoint-free orthogonal edges get an expected Manhattan
@@ -443,6 +451,86 @@ def collinear_entry_warnings(cells, by_id):
                 f"arrow reads as unconnected; move the last waypoint right of "
                 f"the box")
     return warns
+
+
+def self_intersection_warnings(cells, by_id):
+    """A waypointed arrow's own route must not fold back and cross itself.
+
+    Hand-authored waypoints can double back and slice through an earlier
+    segment of the same edge - the arrow reads as a loop knot even though both
+    endpoints are correctly connected. Only waypointed edges are checked: auto-
+    routed edges get their route from draw.io at render time and cannot fold
+    back. Proper interior crossings only; a route that merely grazes its own
+    corner (shared endpoint / collinear touch) is not a defect.
+    """
+    warns = []
+    for c in cells:
+        if c.get("edge") != "1":
+            continue
+        eid = c.get("id")
+        pts = edge_route(c, by_id)
+        if not pts or len(pts) < 4:
+            continue
+        crossing = None
+        for i in range(len(pts) - 1):
+            for j in range(i + 2, len(pts) - 1):
+                if segments_cross(pts[i], pts[i + 1], pts[j], pts[j + 1]):
+                    crossing = (i, j)
+                    break
+            if crossing:
+                break
+        if crossing:
+            warns.append(
+                f"edge {eid!r} route self-intersects (segments {crossing[0]} "
+                f"and {crossing[1]} cross) - the arrow loops back through its "
+                f"own line; drop the folding waypoints")
+    return warns
+
+
+def flow_cycle_warnings(cells, by_id):
+    """The directed flow graph (arrow source -> target) must be acyclic.
+
+    A cycle means an arrow chain closes a loop back onto itself
+    (a -> b -> c -> a) - in an architecture figure that reads as an accidental
+    backward connection, not a real data flow. Deliberate feedback / iterative
+    edges (drawn dashed along the outer corridor per the style guide) are the
+    intentional exception: if the model truly loops, keep the edge and accept
+    the warning (or annotate the cycle as a design feature). DFS with three
+    colours over vertex cells only, so a dangling edge can never fabricate a
+    cycle.
+    """
+    verts = [c.get("id") for c in cells if c.get("vertex") == "1"]
+    adj = {vid: [] for vid in verts}
+    for c in cells:
+        if c.get("edge") != "1":
+            continue
+        s, t = c.get("source"), c.get("target")
+        if s in adj and t in adj:
+            adj[s].append(t)
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color = {vid: WHITE for vid in verts}
+    stack, cycles = [], []
+
+    def dfs(u):
+        color[u] = GRAY
+        stack.append(u)
+        for w in adj.get(u, []):
+            if color[w] == GRAY:
+                cycles.append(stack[stack.index(w):] + [w])
+            elif color[w] == WHITE:
+                dfs(w)
+        stack.pop()
+        color[u] = BLACK
+
+    for v in verts:
+        if color[v] == WHITE:
+            dfs(v)
+    return [
+        f"directed cycle in flow graph: {' -> '.join(cyc)} - the arrows close "
+        f"a loop; reverse or drop the backward edge (unless this is a "
+        f"deliberate feedback/iterative connection)"
+        for cyc in cycles
+    ]
 
 
 def style_value(style, key):
@@ -2020,12 +2108,14 @@ def cells_by_id(cells, cid):
     return None
 
 
-def check_page(diagram, recipe=None):
+def check_page(diagram, recipe=None, acyclic=False):
     """Return (errors, warnings) for one <diagram> page.
 
     ``recipe`` is an optional per-figure archetype spec (see load_recipe) that
     adds the semantic invariant checks (corridor centring, arm mirroring,
     horizontal skips, density) on top of the generic structural lints.
+    ``acyclic`` opts into the directed-flow-graph cycle check - off by default
+    because multi-agent / RL / feedback figures legitimately cycle.
     """
     name = diagram.get("name", "?")
     model = diagram.find("mxGraphModel")
@@ -2118,6 +2208,9 @@ def check_page(diagram, recipe=None):
     warns += spacing_warnings(cells, ids)
     warns += port_stacking_warnings(cells, ids)
     warns += collinear_entry_warnings(cells, ids)
+    warns += self_intersection_warnings(cells, ids)
+    if acyclic:
+        warns += flow_cycle_warnings(cells, ids)
     warns += label_gap_warnings(cells, ids)
     warns += label_bg_warnings(cells, ids)
     warns += arrow_through_text_warnings(cells, ids)
@@ -2164,6 +2257,11 @@ def main():
                     help="apply archetype invariants from recipes/NAME.json "
                          "(corridor centring, arm mirroring, horizontal skips, "
                          "density floors)")
+    ap.add_argument("--acyclic", action="store_true",
+                    help="flag directed cycles in the flow graph as warnings - "
+                         "opt-in because multi-agent / feedback / iterative "
+                         "figures legitimately loop; enable for acyclic "
+                         "feedforward pipelines")
     args = ap.parse_args()
     try:
         tree = ET.parse(args.file)
@@ -2176,7 +2274,7 @@ def main():
     pages = tree.getroot().findall("diagram") or [tree.getroot()]
     errors, warns = [], []
     for page in pages:
-        e, w = check_page(page, recipe)
+        e, w = check_page(page, recipe, args.acyclic)
         errors += e
         warns += w
     for w in warns:
@@ -2223,6 +2321,12 @@ DEMO_XML = """<mxfile><diagram><mxGraphModel><root>
   <mxCell id="e_skip" edge="1" parent="1" source="c1" target="c3">
     <mxGeometry relative="1" as="geometry"><Array as="points">
       <mxPoint x="60" y="140"/><mxPoint x="380" y="140"/></Array></mxGeometry></mxCell>
+  <mxCell id="e_loop" edge="1" parent="1" source="a4" target="a5">
+    <mxGeometry relative="1" as="geometry"><Array as="points">
+      <mxPoint x="1000" y="40"/><mxPoint x="1000" y="100"/><mxPoint x="1060" y="100"/>
+      <mxPoint x="1060" y="70"/><mxPoint x="940" y="70"/><mxPoint x="940" y="40"/>
+      <mxPoint x="1140" y="40"/></Array></mxGeometry></mxCell>
+  <mxCell id="e_back" edge="1" parent="1" source="a2" target="a1"/>
 </root></mxGraphModel></diagram></mxfile>"""
 
 
@@ -2234,8 +2338,10 @@ def demo():
     a detour, (c) a skip edge that genuinely needs its waypoints (c2 blocks the
     straight line), (d) a lane with one stray 480px hole in the MIDDLE of an
     otherwise uniform 40px row, and (e) a lane whose only stray gap is the LAST
-    one - a 180px track seam on the lane edge, which must stay silent. Asserts
-    (a) (b) and (d) warn, (c) and (e) stay silent.
+    one - a 180px track seam on the lane edge, which must stay silent, (f) an
+    edge whose route folds back and self-intersects (a4->a5 loop knot), and
+    (g) a 2-edge directed cycle (a1 -> a2 -> a1). Asserts (a) (b) (d) (f) (g)
+    warn, (c) (e) stay silent.
     """
     root = ET.fromstring(DEMO_XML)
     model = next(root.iter("mxGraphModel"))
@@ -2254,6 +2360,14 @@ def demo():
                    for w in pw), pw
     assert not any("'d1'" in w or "'d2'" in w or "'d3'" in w or "'d4'" in w
                    for w in pw), pw
+
+    si = self_intersection_warnings(cells, ids)
+    assert any("'e_loop'" in w and "self-intersect" in w for w in si), si
+    assert not any("'e_skip'" in w for w in si), si
+
+    fc = flow_cycle_warnings(cells, ids)
+    assert any("directed cycle" in w and "a1" in w and "a2" in w for w in fc), fc
+    assert not any("d1" in w for w in fc), fc
     print("ok")
 
 
