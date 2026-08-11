@@ -153,7 +153,7 @@ Contributions are welcome! The most useful contributions for a research-tooling 
 
 ## Dependencies
 
-- **draw.io desktop** — required for PNG/SVG preview and export: [drawio-desktop releases](https://github.com/jgraph/drawio-desktop/releases), or the web app at [app.diagrams.net](https://app.diagrams.net). The `.drawio` file itself can be produced without it.
+- **draw.io desktop** — required for PNG/SVG preview and export: [drawio-desktop releases](https://github.com/jgraph/drawio-desktop/releases), or the web app at [app.diagrams.net](https://app.diagrams.net). The skill probes for the CLI (`drawio` on PATH, `C:\Program Files\draw.io\draw.io.exe`, `%LOCALAPPDATA%\Programs\draw.io\draw.io.exe`, macOS `.app`); if none is found it offers to install it via your package manager (`winget` / `brew` / `snap`) **only after asking you first** — and still delivers the `.drawio` file if you decline or the install fails.
 - **Python 3** (optional, stdlib only) — runs `scripts/validate.py` (incl. `--recipe` semantic invariants), `fix_layout.py`, `edgeports.py`, `respread_ports.py`; `scripts/build_icon_library.py` regenerates the icon asset pack from its manifest.
 - **A vision-capable model** — used for the visual self-check step, now a residual safety net: the deterministic checks cover the structural *and* intent defect classes.
 

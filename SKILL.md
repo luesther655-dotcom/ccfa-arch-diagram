@@ -131,15 +131,26 @@ python3 scripts/validate.py <name>.drawio --recipe symmetric_u --strict   # 对�
   视觉自检兜底（但自检轮次预算不变）。
 
 ### Step 3 — 导出预览（draw.io 桌面 CLI）
-先探测 CLI（`drawio --version` → `"C:\Program Files\draw.io\draw.io.exe" --version`
-→ macOS .app 全路径，任一成功即可，后续沿用该写法），然后：
+先探测 CLI（按序，任一成功即可，后续沿用该写法）：
+`drawio --version` →
+`"C:\Program Files\draw.io\draw.io.exe" --version` →
+`"%LOCALAPPDATA%\Programs\draw.io\draw.io.exe" --version` →
+macOS `.app` 全路径。然后：
 
 ```bash
 drawio -x -f png --width 2000 -o <name>.png <name>.drawio
 ```
 
 **预览绝不加 `-e`**（嵌入块会让视觉模型 400 拒读），**用 `--width 2000`
-不用 `-s 2`**（防超 2576px 视觉上限）。**CLI 不存在时**：结构校验（Step 2 末尾的 validate.py）照跑，跳过
+不用 `-s 2`**（防超 2576px 视觉上限）。
+
+**CLI 未找到 → 先问再装**：向用户说明"未检测到 draw.io CLI，是否现在自动安装？"
+——安装是系统级改动，**必须等用户明确同意才执行**，绝不擅自安装。用户同意后按平台安装，装完**重新探测**再走本步：
+- Windows → `winget install --id JGraph.Drawio --source winget`
+- macOS → `brew install --cask drawio`
+- Linux → `snap install drawio-desktop`（或 `flatpak install flathub com.jgraph.drawio.desktop`）
+
+用户**拒绝安装 / 安装失败 / 无包管理器**时：结构校验（Step 2 末尾的 validate.py）照跑，跳过
 Step 3-4，直接交付 `.drawio`，告知用户用 draw.io 桌面端/网页版打开导出——
 **不要**用 Python 库自造预览（本 skill 不含任何渲染代码，近似预览
 只会误导）。
@@ -232,6 +243,10 @@ drawio -x -f svg -e -o <name>.svg <name>.drawio               # 矢量，投稿�
 ## 依赖
 - **draw.io 桌面端**（预览/导出需要；没有也能交付 .drawio 本身）：
   https://github.com/jgraph/drawio-desktop/releases 或网页 app.diagrams.net。
+  探测路径含 `%LOCALAPPDATA%\Programs\draw.io\draw.io.exe`（Windows 按用户安装）；
+  检测不到时 Step 3 会在**征得你同意后**用包管理器自动安装
+  （Windows `winget install --id JGraph.Drawio`、macOS `brew install --cask drawio`、
+  Linux `snap install drawio-desktop`）。
 - **Python 3**（可选，仅标准库）：跑 `scripts/` 下的 validate / edgeports /
   respread_ports 结构校验与端口修复。**生成仍然全手写**——这三个是
   校验/修复工具，不是生成脚本；没有 Python 就靠视觉自检兜底。
