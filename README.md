@@ -91,7 +91,7 @@ Different model families map to different figure shapes. The skill picks the rig
 | **D · Reasoning stages** | CoT / reasoning chains (stage containers + step notes) | [`examples/reasoning_stages.drawio`](examples/reasoning_stages.drawio) |
 | **E · Framework bands** | Multimodal LLMs / unified frameworks (dark header bands) | [`examples/framework_bands.drawio`](examples/framework_bands.drawio) |
 
-Classic single-figure references: [`examples/transformer_mt.drawio`](examples/transformer_mt.drawio), [`examples/vit.drawio`](examples/vit.drawio), [`examples/diffusion.drawio`](examples/diffusion.drawio).
+Classic single-figure references: [`examples/transformer_mt.drawio`](examples/transformer_mt.drawio), [`examples/vit.drawio`](examples/vit.drawio), [`examples/unet.drawio`](examples/unet.drawio).
 
 Every example is a validated, hand-authored `.drawio` file — open it in draw.io and use it as a template.
 

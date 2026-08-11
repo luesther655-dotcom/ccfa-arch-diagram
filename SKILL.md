@@ -55,7 +55,7 @@ draw.io 架构图。**布局与走线由你手算、XML 由你手写**（语法�
 | CoT / 推理链 / 规划 | D 推理阶段容器 | 阶段大面板 + 编号步骤模块 + note 便签产物 | `examples/reasoning_stages.drawio` |
 | 多模态大模型 / 统一框架 | E 横带框架图 | 能力面板并排 + 深色标题栏分组 + 底部训练带 | `examples/framework_bands.drawio` |
 
-经典单图参考：`examples/transformer_mt.drawio`、`vit.drawio`、`diffusion.drawio`。
+经典单图参考：`examples/transformer_mt.drawio`、`vit.drawio`、`unet.drawio`。
 
 **2. 布局方向**：序列/语言/扩散 → 从左到右；视觉金字塔 → 自下而上；
 U-Net/编码器-解码器 → 对称 U 型（三段水平居中，Bottleneck 置中，见
@@ -76,7 +76,12 @@ U-Net/编码器-解码器 → 对称 U 型（三段水平居中，Bottleneck 置
 多模态输入、注意力/生物医学可视化），打开 `references/icon-library.md`，
 直接复制里面的 paste-ready mxCell 片段（内嵌 SVG 单色线稿，零外部依赖，
 改 `x/y` 与 `id` 即用；默认 25 个，单色描边 `#5F6368`，按当前调色板换色见
-该文件的「换色配方」）。
+该文件的「换色配方」）。**25 个不够、要新实体**（卫星/雷达/芯片/无人机等）
+→ 按该文件「新图标创作规范」手写一个 24×24 单色线稿 SVG（规范 + 可直接抄的
+模板都在里面），追加进 `assets/icon_defs.json` 的 `icons` 数组，跑
+`python3 scripts/build_icon_library.py` 重建库/预览/文档，再
+`python3 scripts/validate.py assets/icon_preview.drawio` 确认 0 error——builder
+会确定性自检（颜色/线宽/越界坐标等），写错会直接报出来指给你改。
 
 **密度规范（防止"宽松简陋"）**：顶会图是高密度的，动笔前对照下限自查——
 - 原型 A（单网络长条）：≥15 组件、≥18 条边；主链上**每个** Conv/Norm/激活都
@@ -107,7 +112,7 @@ U-Net/编码器-解码器 → 对称 U 型（三段水平居中，Bottleneck 置
 **写完必做结构校验（draw.io 都不需要启动）**：
 
 ```bash
-python3 scripts/validate.py <name>.drawio                 # 几何/结构：重叠/骑跨/标题带/端口堆叠/超宽/悬空边/箭头穿字
+python3 scripts/validate.py <name>.drawio                 # 几何/结构：重叠/骑跨/标题带/端口堆叠/超宽/悬空边/箭头穿字/走线平直/间距均匀
 python3 scripts/validate.py <name>.drawio --recipe symmetric_u --strict   # 对称 U 型图再加语义不变量，0/0 才算过
 ```
 
@@ -116,7 +121,11 @@ python3 scripts/validate.py <name>.drawio --recipe symmetric_u --strict   # 对�
 - **语义不变量把"以前只有目检能发现"的缺陷变成确定性检查**（validate 直接
   由几何重新推导，不依赖渲染）：① 箭头**穿自己的节点**钉在远侧端口（读起来
   像没接上）；② op 圆出边方向与 `↑`/`↓` 语义相反；③ 文字溢出 chip；
-  ④ 对称 U 型：Bottleneck 不居中、两臂不镜像、跳跃线不水平、密度不达标。
+  ④ 对称 U 型：Bottleneck 不居中、两臂不镜像、跳跃线不水平、密度不达标；
+  ⑤ 走线平直：共线拐点（删掉不改路由）与"本可走直却拐弯"（直连无框/无字
+  阻挡）都报 warning；⑥ 间距均匀：lane/column 内中位间隙的倍数异常（图例
+  列、U 型走廊、侧边栏等合法结构已豁免）与"框填充率过低=大片留白"都报
+  warning。
   对应原型图的配方在 `scripts/recipes/<name>.json`（`symmetric_u` 已内置），
   新图画完把 ids 抄进配方即可启用 ④。
 - 报"同侧未钉端口堆叠"→ 跑 `python3 scripts/edgeports.py <name>.drawio`
@@ -219,7 +228,10 @@ drawio -x -f svg -e -o <name>.svg <name>.drawio               # 矢量，投稿�
 7. **写完先跑 `scripts/validate.py`**：error 清零才导出；语义不变量用
    `--recipe`（对称 U 型 → `symmetric_u`），报居中/穿节点/op 方向 →
    `fix_layout.py --apply` 自动修复复检；端口问题用 `edgeports.py` /
-   `respread_ports.py` 兜底。**draw.io CLI 导出 = 唯一预览真相**；自检 ≤2 轮，
+   `respread_ports.py` 兜底。**走线平直/间距均匀也是确定性 warning**（见
+   Step 2 ⑤⑥）：报"共线拐点"就删掉那个 `<mxPoint>`，"可走直却拐弯"就换
+   端口侧或删拐点，报"uneven spacing"就挪框补间隙——这些都是实打实的观感
+   缺陷，不是噪音。**draw.io CLI 导出 = 唯一预览真相**；自检 ≤2 轮，
    用户反馈 ≤5 轮。无 CLI 时 validate+recipe 0/0 即交付。
 8. **顶会装裱**：Times New Roman + 半透明容器 + 底部虚线图例栏（多面板系统图
    用右侧图例列）；论文投稿底部图题（"Fig. N. ..."）。

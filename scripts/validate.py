@@ -29,7 +29,12 @@ Checks added for this skill's observed failure modes:
     over lines/shapes with no backing);
   - an arrow entering a top-titled box's top edge beneath its own title text,
     and routes slicing through other boxes' top titles (containers are exempt
-    from the through-vertex check, so their title bands were previously silent).
+    from the through-vertex check, so their title bands were previously silent);
+  - waypointed arrows that are not straight when they could be (a collinear
+    redundant waypoint; aligned endpoints with an unblocked straight connector
+    yet routed with waypoints);
+  - uneven or excessive spacing between boxes in a lane/column (a stray hole, a
+    cramped pair, or a lane spread into islands of whitespace).
 
 Edge routing checks (warnings) use explicit waypoints (<Array as="points">)
 when present; waypoint-free orthogonal edges get an expected Manhattan
@@ -70,6 +75,19 @@ CORRIDOR_BELOW_SLACK = 4      # px - bottleneck centre must hang below the arms
 MIRROR_TOL = 8                # px - mirrored arm members must be level within this
 SKIP_HORIZONTAL_TOL = 4       # px - a skip edge's two ends share a height within this
 TEXT_FIT_SLACK = 3            # px - estimated text block may exceed the box by this
+
+# Straightness / spacing quality invariants (the "needs 目检" feel rules). These
+# turn the guide's "arrows straight unless they must dodge" and "boxes tightly
+# and uniformly spaced" preferences into deterministic warnings.
+ALIGN_EPS = 1.0              # px - endpoints within this of the same x/y = aligned
+COLLINEAR_EPS = 0.5          # px^2 - cross product below this = redundant waypoint
+GAP_RATIO_HI = 2.0           # interior gap >= this x the lane median -> a stray hole
+GAP_ABS_FLOOR = 40           # px - interior stray gap must also exceed the median by this
+GAP_RATIO_BOUNDARY = 5.0     # first/last gap of a lane needs this ratio - track seams live on the edges
+GAP_ABS_BOUNDARY = 150       # px - boundary stray gap must also clear this
+LANE_FILL_MIN = 0.3          # lane boxes must fill at least this of the lane span
+MIN_SPACING_PX = 34          # smaller boxes (op circles, legend swatches) don't participate
+MIN_LANE_BOXES = 3           # lanes with fewer boxes than this are not judged
 
 
 def rect(cell):
@@ -1309,6 +1327,312 @@ def geometry_warnings(cells, ids, parents):
     return warns
 
 
+def median(values):
+    """Median of a small float list (0.0 for an empty list)."""
+    if not values:
+        return 0.0
+    s = sorted(values)
+    n = len(s)
+    return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2.0
+
+
+def _cluster_bands(boxes, axis):
+    """Group (id, rect) boxes into lanes/columns by overlapping extents.
+
+    ``axis`` is the dimension along which boxes must overlap to sit in the same
+    row ("y" -> a horizontal lane; "x" -> a vertical column). Boxes whose
+    intervals on that axis overlap (or touch) cluster together; each cluster is
+    ordered by that axis' start.
+    """
+    i = 1 if axis == "y" else 0      # interval start index within the rect
+    span = 3 if axis == "y" else 2   # interval length index within the rect
+    ordered = sorted(boxes, key=lambda b: b[1][i])
+    clusters, cur, hi = [], [], None
+    for vid, r in ordered:
+        lo = r[i]
+        if cur and lo <= hi + 0.5:
+            cur.append((vid, r))
+            hi = max(hi, lo + r[span])
+        else:
+            if cur:
+                clusters.append(cur)
+            cur, hi = [(vid, r)], lo + r[span]
+    if cur:
+        clusters.append(cur)
+    return clusters
+
+
+def _judge_gaps(warns, boxes, gaps, extent_axis, occup, containers):
+    """Emit spacing warnings for one lane/column.
+
+    ``boxes`` is the cluster sorted along the lane direction and ``gaps`` the
+    aligned list of gaps between consecutive boxes. ``occup`` lists every non-
+    text box in the figure (tiny op circles included) so a gap can be tested
+    for genuine whitespace, and ``containers`` supplies the skip set. Three
+    rules:
+
+    - a gap is uneven only when nothing occupies the rectangle it opens between
+      its two boxes: an op circle or skip symbol living in that column strip
+      makes it a working corridor (a U-shape funnel, a residual shortcut), not
+      stray whitespace;
+    - a gap >= GAP_RATIO_HI x the lane's median (and GAP_ABS_FLOOR px more) is
+      then a stray hole. The first/last gap of a lane needs a stricter ratio
+      (GAP_RATIO_BOUNDARY x, GAP_ABS_BOUNDARY px): track seams and branch
+      separations naturally land on the lane's edges, so only an extreme gap
+      there is worth flagging;
+    - the lane is "sparse" when its boxes fill less than LANE_FILL_MIN of the
+      lane's own span along that axis (excess whitespace) - pull them together.
+      Normalising by the span lets a U-shaped corridor pass: the big boxes
+      around it still fill the span.
+
+    The too-small direction is deliberately not checked: a small gap beside an
+    intentional corridor is normal, and the overlap/straddle/touch checks
+    already own "two boxes crammed".
+    """
+    pairs = [(a, b, g) for (a, b, g) in zip(boxes, boxes[1:], gaps) if g >= 0]
+    if len(pairs) < 2:
+        return
+    med = median([g for _, _, g in pairs])
+    if med <= 0:
+        return
+    n = len(pairs)
+    for idx, ((aid, ar), (bid, br), g) in enumerate(pairs):
+        if idx == 0 or idx == n - 1:
+            if g < GAP_RATIO_BOUNDARY * med or g < med + GAP_ABS_BOUNDARY:
+                continue
+        elif g < GAP_RATIO_HI * med or g < med + GAP_ABS_FLOOR:
+            continue
+        if gap_is_corridor(aid, ar, bid, br, extent_axis, occup, containers):
+            continue
+        warns.append(
+            f"gap between boxes {aid!r} and {bid!r} is {g:g}px, "
+            f"{g / med:.1f}x the lane median {med:g}px - uneven spacing / "
+            f"stray whitespace; move {bid!r} closer (or space the rest to "
+            f"match)")
+    i = 0 if extent_axis == "width" else 1
+    span_i = 2 if extent_axis == "width" else 3
+    lo = min(b[1][i] for b in boxes)
+    hi = max(b[1][i] + b[1][span_i] for b in boxes)
+    span = hi - lo
+    if span > 0:
+        filled = sum(b[1][span_i] for b in boxes)
+        if filled / span < LANE_FILL_MIN:
+            warns.append(
+                f"lane around {boxes[0][0]!r} is sparse: its {len(boxes)} "
+                f"boxes fill only {filled / span * 100:.0f}% of the "
+                f"{span:g}px span - excessive whitespace; pull the boxes "
+                f"together")
+
+
+def gap_is_corridor(aid, a, bid, b, extent_axis, occup, containers):
+    """True when the rectangle a gap opens between two lane boxes holds a box.
+
+    The rectangle spans the two boxes along the lane axis (a's trailing edge to
+    b's leading edge) and the union of their intervals on the other axis. Any
+    non-text box whose centre lands inside it is an occupant: a skip/sum
+    circle, a funnel target, a hanging label - the gap is a working corridor,
+    not stray whitespace. The two endpoint boxes and the containers that hold
+    them are excluded: a container's own interior is not an obstacle.
+    """
+    if extent_axis == "width":     # a horizontal lane: hole along x, band along y
+        hx0, hx1 = a[0] + a[2], b[0]
+        hy0, hy1 = min(a[1], b[1]), max(a[1] + a[3], b[1] + b[3])
+    else:                          # a vertical column: hole along y, band along x
+        hx0, hx1 = min(a[0], b[0]), max(a[0] + a[2], b[0] + b[2])
+        hy0, hy1 = a[1] + a[3], b[1]
+    skip = {aid, bid}
+    for oid, ob in occup:
+        if oid in containers:
+            if contains(ob, a):
+                skip.add(oid)
+            if contains(ob, b):
+                skip.add(oid)
+    for oid, ob in occup:
+        if oid in skip:
+            continue
+        cx = ob[0] + ob[2] / 2.0
+        cy = ob[1] + ob[3] / 2.0
+        if hx0 < cx < hx1 and hy0 < cy < hy1:
+            return True
+    return False
+
+
+def straightness_warnings(cells, ids):
+    """Two "arrow straightness" rules.
+
+    The guide's routing discipline wants arrows straight unless they must dodge
+    a box or a label (换端口侧 first, waypoints only as a last resort). These
+    checks turn that preference into deterministic warnings:
+
+    1. A waypoint sitting exactly on the line between its two neighbours bends
+       nothing - it is redundant, and deleting it leaves the route unchanged.
+       Hand-authored waypoints on the 10px grid make these exact collisions
+       common enough to check.
+    2. An orthogonal edge whose endpoints are axis-aligned - or any edge whose
+       straight connector is clear - carries waypoints that are pure detour.
+       The straight line counts as "clear" only when it slices no box, text
+       cell, edge label or box title, so a genuine obstacle (the case the
+       guide's 绕行 rule permits) never triggers. Crossing another edge is
+       deliberately ignored: line crossings are often unavoidable and are not
+       the defect this rule targets.
+    """
+    warns = []
+    allv, text_rects, title_rects = [], [], []
+    for c in cells:
+        if c.get("vertex") != "1" or is_edge_label(c):
+            continue
+        box = abs_rect(c, ids)
+        if box is None:
+            continue
+        if is_text_cell(c):
+            text_rects.append(box)
+        else:
+            allv.append((c.get("id"), box))
+            tr = title_rect(c, ids)
+            if tr:
+                title_rects.append(tr)
+    box_of = dict(allv)
+    label_rects = {}
+    for c in cells:
+        if c.get("edge") == "1":
+            r = edge_label_rect(c, ids)
+            if r:
+                label_rects[c.get("id")] = r
+
+    def skip_set(end_id):
+        """endpoint's own box plus every container holding it."""
+        skip = {end_id}
+        if end_id in box_of:
+            for cid, cbox in allv:
+                if cid != end_id and contains(cbox, box_of[end_id]):
+                    skip.add(cid)
+        return skip
+
+    for c in cells:
+        if c.get("edge") != "1":
+            continue
+        eid = c.get("id")
+        wps = edge_waypoints(c)
+        if not wps:
+            continue
+        s, t = endpoint(c, "source", ids), endpoint(c, "target", ids)
+        if s is None or t is None:
+            continue
+        pts = [s] + wps + [t]
+        # rule 1: a waypoint that bends nothing
+        for i in range(1, len(pts) - 1):
+            ax, ay = pts[i - 1]
+            bx, by = pts[i]
+            cx, cy = pts[i + 1]
+            cross = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+            if abs(cross) <= COLLINEAR_EPS:
+                warns.append(
+                    f"edge {eid!r} waypoint at ({bx:g},{by:g}) is collinear "
+                    f"with its two neighbours - it bends nothing; delete it "
+                    f"and the route is unchanged")
+        # rule 2: straight connector is clear, yet the edge detours
+        if (s[0] - t[0]) ** 2 + (s[1] - t[1]) ** 2 < 1.0:
+            continue  # zero-length connector - nothing to straighten
+        style = c.get("style") or ""
+        ortho = style_value(style, "edgeStyle") == "orthogonalEdgeStyle"
+        if ortho and not (abs(s[0] - t[0]) <= ALIGN_EPS or
+                          abs(s[1] - t[1]) <= ALIGN_EPS):
+            continue  # misaligned orthogonal edge genuinely needs bends
+        src, tgt = c.get("source"), c.get("target")
+        skip = skip_set(src) | skip_set(tgt)
+        blocked = any(route_hits_rect([s, t], box)
+                      for vid, box in allv if vid not in skip)
+        if not blocked:
+            blocked = any(route_hits_rect([s, t], box) for box in text_rects)
+        if not blocked:
+            blocked = any(route_hits_rect([s, t], box) for box in title_rects)
+        if not blocked:
+            blocked = any(route_hits_rect([s, t], box)
+                          for bid, box in label_rects.items() if bid != eid)
+        if not blocked:
+            warns.append(
+                f"edge {eid!r} could be a straight connector between its two "
+                f"boxes but routes through {len(wps)} waypoint(s) - no box or "
+                f"label blocks the straight line; delete the waypoints")
+    return warns
+
+
+def spacing_warnings(cells, ids):
+    """Two "space utilisation" rules.
+
+    Boxes inside a lane/column must be spaced roughly uniformly - no stray hole
+    in the row - and the lane must not be spread so thin that its boxes are
+    islands in whitespace. The check is containment-aware (flat files draw
+    containers as background rects, so nesting is found geometrically): members
+    are judged against the other members of the same container, the container
+    itself takes part in the root-level lanes. Legend material is ignored
+    entirely - a container whose non-text members are all tiny swatches is
+    dropped along with its members, and any box smaller than MIN_SPACING_PX in
+    both dimensions (op circles, legend swatches) never participates - so a
+    legend column or bottom bar never skews the gaps of the real figure. The
+    "two boxes crammed together" direction is left to the overlap/straddle/
+    touch checks: a small gap next to an intentional corridor is normal in a
+    U-shaped figure and would be flagged wrongly here. Lanes with fewer than
+    MIN_LANE_BOXES boxes are skipped - a lone pair has nothing to be uniform
+    against.
+    """
+    warns = []
+    allv = []
+    for c in cells:
+        if c.get("vertex") != "1" or is_edge_label(c) or is_text_cell(c):
+            continue
+        box = abs_rect(c, ids)
+        if box is None:
+            continue
+        allv.append((c.get("id"), box))
+    containers = {vid for vid, box in allv
+                  if any(v2 != vid and contains(box, b2) for v2, b2 in allv)}
+    # a legend container holds nothing but tiny swatches (plus text cells)
+    legend = set()
+    for cid, cbox in allv:
+        if cid not in containers:
+            continue
+        members = [(vid, box) for vid, box in allv
+                   if vid != cid and vid not in containers
+                   and contains(cbox, box)]
+        if (members
+                and all(m[1][2] <= MIN_SPACING_PX and m[1][3] <= MIN_SPACING_PX
+                        for m in members)):
+            legend.add(cid)
+    groups = {}    # container id (or None for root) -> [(id, rect)]
+    occup = []     # every non-text box incl. small op circles, minus legends
+    for vid, box in allv:
+        if vid in legend:
+            continue
+        if vid in containers:
+            groups.setdefault(None, []).append((vid, box))
+            occup.append((vid, box))
+            continue
+        holders = [cid for cid, cbox in allv
+                   if cid in containers and contains(cbox, box)]
+        holder = holders[0] if holders else None
+        if holder in legend:
+            continue
+        groups.setdefault(holder, []).append((vid, box))
+        occup.append((vid, box))
+    for group in groups.values():
+        group = [b for b in group
+                 if b[1][2] > MIN_SPACING_PX or b[1][3] > MIN_SPACING_PX]
+        if len(group) < MIN_LANE_BOXES:
+            continue
+        for axis, dir_i, extent in (
+                ("y", 0, "width"),    # a lane: overlap y, sort/gap along x
+                ("x", 1, "height")):  # a column: overlap x, sort/gap along y
+            for cluster in _cluster_bands(group, axis):
+                if len(cluster) < MIN_LANE_BOXES:
+                    continue
+                cluster = sorted(cluster, key=lambda b: b[1][dir_i])
+                gaps = [b2[1][dir_i] - (b1[1][dir_i] + b1[1][dir_i + 2])
+                        for b1, b2 in zip(cluster, cluster[1:])]
+                _judge_gaps(warns, cluster, gaps, extent, occup, containers)
+    return warns
+
+
 def container_warnings(cells):
     """Flat-layout container geometry checks.
 
@@ -1479,6 +1803,8 @@ def check_page(diagram, recipe=None):
                              f"({iw:g}x{ih:g}px)")
     warns += container_warnings(cells)
     warns += geometry_warnings(cells, ids, parents)
+    warns += straightness_warnings(cells, ids)
+    warns += spacing_warnings(cells, ids)
     warns += port_stacking_warnings(cells, ids)
     warns += collinear_entry_warnings(cells, ids)
     warns += label_gap_warnings(cells, ids)
@@ -1552,5 +1878,70 @@ def main():
         sys.exit(1)
 
 
+DEMO_XML = """<mxfile><diagram><mxGraphModel><root>
+  <mxCell id="0"/><mxCell id="1" parent="0"/>
+  <mxCell id="a1" vertex="1" parent="1"><mxGeometry x="0" y="0" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="a2" vertex="1" parent="1"><mxGeometry x="160" y="0" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="a3" vertex="1" parent="1"><mxGeometry x="320" y="0" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="a4" vertex="1" parent="1"><mxGeometry x="920" y="0" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="a5" vertex="1" parent="1"><mxGeometry x="1080" y="0" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="b1" vertex="1" parent="1"><mxGeometry x="0" y="80" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="b2" vertex="1" parent="1"><mxGeometry x="160" y="80" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="b3" vertex="1" parent="1"><mxGeometry x="320" y="80" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="b4" vertex="1" parent="1"><mxGeometry x="480" y="80" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="c1" vertex="1" parent="1"><mxGeometry x="0" y="160" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="c2" vertex="1" parent="1"><mxGeometry x="160" y="160" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="c3" vertex="1" parent="1"><mxGeometry x="320" y="160" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="d1" vertex="1" parent="1"><mxGeometry x="0" y="240" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="d2" vertex="1" parent="1"><mxGeometry x="160" y="240" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="d3" vertex="1" parent="1"><mxGeometry x="320" y="240" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="d4" vertex="1" parent="1"><mxGeometry x="620" y="240" width="120" height="40" as="geometry"/></mxCell>
+  <mxCell id="e_collinear" edge="1" parent="1" source="a1" target="a2">
+    <mxGeometry relative="1" as="geometry"><Array as="points">
+      <mxPoint x="140" y="20"/></Array></mxGeometry></mxCell>
+  <mxCell id="e_detour" edge="1" parent="1" source="b1" target="b2">
+    <mxGeometry relative="1" as="geometry"><Array as="points">
+      <mxPoint x="140" y="60"/><mxPoint x="140" y="100"/></Array></mxGeometry></mxCell>
+  <mxCell id="e_skip" edge="1" parent="1" source="c1" target="c3">
+    <mxGeometry relative="1" as="geometry"><Array as="points">
+      <mxPoint x="60" y="140"/><mxPoint x="380" y="140"/></Array></mxGeometry></mxCell>
+</root></mxGraphModel></diagram></mxfile>"""
+
+
+def demo():
+    """Self-check for the straightness + spacing warnings (validate --demo).
+
+    Builds a figure with (a) an edge carrying a collinear waypoint, (b) an edge
+    whose aligned endpoints have an unblocked straight connector yet route with
+    a detour, (c) a skip edge that genuinely needs its waypoints (c2 blocks the
+    straight line), (d) a lane with one stray 480px hole in the MIDDLE of an
+    otherwise uniform 40px row, and (e) a lane whose only stray gap is the LAST
+    one - a 180px track seam on the lane edge, which must stay silent. Asserts
+    (a) (b) and (d) warn, (c) and (e) stay silent.
+    """
+    root = ET.fromstring(DEMO_XML)
+    model = next(root.iter("mxGraphModel"))
+    cells = list(model.iter("mxCell"))
+    ids = {c.get("id"): c for c in cells if c.get("id")}
+
+    sw = straightness_warnings(cells, ids)
+    assert any("'e_collinear'" in w and "collinear" in w for w in sw), sw
+    assert any("'e_detour'" in w and "straight connector" in w for w in sw), sw
+    assert not any("'e_detour'" in w and "collinear" in w for w in sw), sw
+    assert not any("'e_skip'" in w for w in sw), sw
+
+    pw = spacing_warnings(cells, ids)
+    assert any("'a3'" in w and "uneven spacing" in w for w in pw), pw
+    assert not any("'b1'" in w or "'b2'" in w or "'b3'" in w or "'b4'" in w
+                   for w in pw), pw
+    assert not any("'d1'" in w or "'d2'" in w or "'d3'" in w or "'d4'" in w
+                   for w in pw), pw
+    print("ok")
+
+
 if __name__ == "__main__":
-    main()
+    if "--demo" in sys.argv:
+        demo()
+    else:
+        main()
+

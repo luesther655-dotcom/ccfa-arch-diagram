@@ -49,6 +49,47 @@ python3 scripts/build_icon_library.py --stroke #3A4A5A
 从图库拖图标到画布。**加/改图标**：编辑 `icon_defs.json` → 跑 builder → 重跑
 `python3 scripts/validate.py assets/icon_preview.drawio` 确认 0 error。
 
+## 新图标创作规范（25 个之外的新实体）
+
+需要新实体图标（卫星/雷达/芯片/无人机…）时，**手写一个 24×24 单色线稿 SVG**
+追加进 `assets/icon_defs.json` 的 `icons` 数组，跑 builder 重建。builder 会逐条
+自检格式，违反任一铁律即构建失败并报出是哪条——按下面规范写一次就能过。
+
+| 项 | 必须 | 为什么 |
+|---|---|---|
+| 根元素 | `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>` | `<img>` 渲染靠 viewBox 等比缩放 |
+| 颜色 | 只用当前描边色（默认 `#5F6368`） | 换色是字符串替换，硬编码别的色重生成后不变 |
+| 线宽 | 所有 `stroke-width='1.5'` | 与整包一致，放大小不突兀 |
+| 填充 | 一律 `fill='none'`；仅可点缀实心点用 `fill='#5F6368'` | 线稿风格，大块实心破坏协调 |
+| 范围 | 坐标全在 24×24 内、四周留 ≥2px 边距 | 贴边/越界渲染出来是裁掉的 |
+| 禁止 | `<?xml?>`、`<image>`、`currentColor`、外部引用、渐变 | 前两个见换色配方，后者 `<img>` 里恒不生效 |
+
+**手写要点**（与顶会图元同一审美）：一个实体一个清晰剪影，2–4 条主结构线，
+不要细节堆砌——复杂度上限 ≈ `gpu`（板卡+核心）或 `brain`（轮廓+褶皱示意）。
+`category` 只能取五类之一：`data / hardware / human / tool / model`；`w`×`h`
+是图标在画布上的占位尺寸，整包统一 `48 × 56`。模板（卫星，可直接抄）：
+
+```json
+{ "id": "satellite", "label": "卫星 Satellite", "category": "hardware",
+  "w": 48, "h": 56,
+  "svg": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='7' y='8' width='10' height='8' rx='1.5' fill='none' stroke='#5F6368' stroke-width='1.5'/><rect x='4' y='9.5' width='2.5' height='5' fill='none' stroke='#5F6368' stroke-width='1.5'/><rect x='17.5' y='9.5' width='2.5' height='5' fill='none' stroke='#5F6368' stroke-width='1.5'/><path d='M10 8V5.5M14 8V5.5M12 4l-1.5 1.5h3L12 4zM10 16v2.5M14 16v2.5M12 20l-1.5-1.5h3L12 20z' fill='none' stroke='#5F6368' stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round'/></svg>" }
+```
+
+**流程**（全程确定性可复验）：
+
+```bash
+# 1) 编辑 assets/icon_defs.json：icons 数组追加一条（id 与现有 25 个不重复）
+# 2) 重建三处产出：ccfa-icons.xml / icon_preview.drawio / 下方目录块
+python3 scripts/build_icon_library.py
+# 3) 校验预览图 0 error（网格不越界、id 唯一）
+python3 scripts/validate.py assets/icon_preview.drawio
+# 4) 新图标即进库：从 ccfa-icons.xml 拖拽，或用下方生成的 paste-ready 片段
+```
+
+> `id` 用蛇形小写英文；`label` 双语（中文 空格 英文）。builder 对每个 SVG 做
+> 确定性自检（可解析/根元素/颜色/线宽/越界坐标），全部通过才产出——自检信息
+> 会告诉你具体改哪里。
+
 ---
 
 <!-- ICON-SNIPPETS:BEGIN -->

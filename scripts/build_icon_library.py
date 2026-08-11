@@ -25,6 +25,7 @@ import argparse
 import base64
 import json
 import os
+import re
 import sys
 import xml.etree.ElementTree as ET
 from urllib.parse import quote
@@ -81,8 +82,16 @@ def build_cell_style(data_uri):
     return LABEL_STYLE + data_uri
 
 
-def validate_svgs(icons):
-    """每个 SVG 必须自含、可解析、带 viewBox、无外部引用、无 <?xml?> 声明。"""
+def validate_svgs(icons, stroke):
+    """每个 SVG 必须自含、可解析、带 viewBox、无外部引用、无 <?xml?> 声明，
+    且遵守整包线稿纪律（这些约定决定了换色与缩放的正确性，违反会在画布上
+    静默产出坏图标）：
+    - 只用当前描边色——换色靠 `svg.replace(stroke, new_stroke)` 字符串替换，
+      硬编码别的十六进制色会重生成后仍不变；
+    - 无 currentColor——shape=image 经 `<img>` 渲染没有 CSS 继承，恒不生效；
+    - stroke-width 统一 1.5，与整包线宽一致；
+    - 全部坐标落在 24×24 viewBox 附近——越界会渲染成贴边/裁掉的图标。
+    """
     problems = []
     for ic in icons:
         svg = ic["svg"]
@@ -90,6 +99,9 @@ def validate_svgs(icons):
             problems.append(f"{ic['id']}: 含 <?xml?> 声明，某些 <img> 渲染器会 0×0")
         if "<image" in svg.lower():
             problems.append(f"{ic['id']}: 含外部 <image> 引用，会渲染失败")
+        if "currentcolor" in svg.lower():
+            problems.append(f"{ic['id']}: 含 currentColor——shape=image 经 "
+                            f"<img> 渲染无 CSS 继承，此色恒不生效，改用描边色")
         try:
             root = ET.fromstring(svg)
         except ET.ParseError as e:
@@ -100,6 +112,27 @@ def validate_svgs(icons):
             problems.append(f"{ic['id']}: 根元素不是 <svg>")
         elif "viewBox" not in root.attrib and "width" not in root.attrib:
             problems.append(f"{ic['id']}: 缺 viewBox/width，会渲染成 0×0")
+        bad = set(re.findall(r"#[0-9A-Fa-f]{6}", svg)) - {stroke}
+        if bad:
+            problems.append(f"{ic['id']}: 含非描边色 {sorted(bad)}——单色线稿包"
+                            f"只允许描边色 {stroke}（换色靠字符串替换，硬编码"
+                            f"别的色会重生成后仍不变）")
+        for num in re.findall(r"stroke-width\s*=\s*[\"']?([0-9.]+)", svg):
+            if float(num) != 1.5:
+                problems.append(f"{ic['id']}: stroke-width={num}≠1.5——与整包"
+                                f"线宽不一致，缩放到 24×24 会明显偏粗/偏细")
+                break
+        # 越界扫描：剔掉十六进制色与 URL（xmlns 里带 "2000"）后，24×24 viewBox
+        # 内任何坐标绝对值不应远超 24（留 6px 线宽/圆角余量）；一次扫描
+        # path/rect/circle 全部数字。
+        cleaned = re.sub(r"[a-zA-Z][\w+.-]*://[^\s'\"<>]*", "", svg)
+        cleaned = re.sub(r"#[0-9A-Fa-f]{6}", "", cleaned)
+        num_re = r"[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?"
+        stray = [n for n in re.findall(num_re, cleaned) if abs(float(n)) > 30]
+        if stray:
+            problems.append(f"{ic['id']}: 坐标 {stray[:6]}{'…' if len(stray) > 6 else ''}"
+                            f"超出 24×24 viewBox——图标会渲染成贴边/裁掉，"
+                            f"把内容画回 2..22 范围内")
     return problems
 
 
@@ -132,6 +165,8 @@ def emit_library(icons, encoding, out):
 
 
 def emit_preview(icons, encoding, out):
+    rows = (len(icons) + COLS - 1) // COLS
+    page_h = max(PAGE_H, ORIGIN_Y + rows * PITCH_Y + CELL_H + 2)
     cells = []
     for i, ic in enumerate(icons):
         col, row = i % COLS, i // COLS
@@ -150,7 +185,7 @@ def emit_preview(icons, encoding, out):
         '  <diagram name="icon-preview" id="iconpreview">\n'
         '    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" '
         'tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" '
-        f'pageWidth="{PAGE_W}" pageHeight="{PAGE_H}" math="0" shadow="0" '
+        f'pageWidth="{PAGE_W}" pageHeight="{page_h}" math="0" shadow="0" '
         'background="#FFFFFF">\n'
         '      <root>\n'
         '        <mxCell id="0"/>\n'
@@ -242,7 +277,7 @@ def main():
                  for ic in icons]
         stroke = new_stroke
 
-    problems = validate_svgs(icons)
+    problems = validate_svgs(icons, stroke)
     for p in problems:
         print("WARN:", p, file=sys.stderr)
     if problems:

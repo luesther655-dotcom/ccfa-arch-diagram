@@ -173,7 +173,13 @@ lane1:  (skip 虚线沿容器顶部外环绕行)  (不穿兄弟成员)
   无拐点正交边按曼哈顿路径检查，报 WARNING `edge '…' auto-routed across
   sibling member '…'` 即命中。
 - **工具兜底**：写完跑 `python3 scripts/validate.py <file>`；未钉端口
-  堆叠跑 `edgeports.py`，已钉撞槽跑 `respread_ports.py`。
+  堆叠跑 `edgeports.py`，已钉撞槽跑 `respread_ports.py`。校验器另外把
+  "箭头平直、间距均匀"的观感规则变成确定性 warning：**走线**报共线拐点
+  （`collinear`）与本可走直却拐弯（`straight connector`），删拐点或换端口侧
+  即平；**间距**按 lane/column 的自身中位间隙判异常（`uneven spacing`）与
+  框填充率过低判留白（`sparse`），图例列、U 型走廊、侧边栏、带 op 圆的
+  走廊与 lane 边缘的支路缝都已豁免，命中的要么是真间隙缺陷要么是确有依据
+  的刻意留白。
 
 ---
 
