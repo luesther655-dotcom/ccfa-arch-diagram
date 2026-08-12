@@ -1,4 +1,4 @@
-# ccfa-arch-diagram
+# ccfa-arch-skill
 
 **Generate publication-ready, CCF-A conference-grade model architecture diagrams as editable draw.io files.**
 
